@@ -81,6 +81,7 @@
     <GenerateManifest>false</GenerateManifest>
     <LibraryPath>$(SolutionDir)..\Shadow Common Files\Bin;$(LibraryPath)</LibraryPath>
     <IncludePath>$(SolutionDir)..\Shadow Common Files\Include;$(IncludePath)</IncludePath>
+    <TargetName>$(ProjectName)SSE</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Midl>
