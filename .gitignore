@@ -1,0 +1,6 @@
+Bin
+ipch
+*.suo
+*.sdf
+*.tlog
+*.opensdf

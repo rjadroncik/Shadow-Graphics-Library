@@ -1,0 +1,95 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: AngelGL - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP103.tmp" with contents
+[
+/nologo /G6 /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "ANGELGL_EXPORTS" /Fp"Release/AngelGL.pch" /Yu"stdafx.h" /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Roman\Projects\Programming\AngelGL\AngelGL.cpp"
+"D:\Roman\Projects\Programming\AngelGL\Math.cpp"
+"D:\Roman\Projects\Programming\AngelGL\Renderer.cpp"
+"D:\Roman\Projects\Programming\AngelGL\StateVector.cpp"
+]
+Creating command line "cl.exe @C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP103.tmp" 
+Creating temporary file "C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP104.tmp" with contents
+[
+/nologo /G6 /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "ANGELGL_EXPORTS" /Fp"Release/AngelGL.pch" /Yc"stdafx.h" /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Roman\Projects\Programming\AngelGL\StdAfx.cpp"
+]
+Creating command line "cl.exe @C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP104.tmp" 
+Creating temporary file "C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP105.tmp" with contents
+[
+Dxguid.lib ddraw.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /incremental:no /pdb:"Release/AngelGL.pdb" /machine:I386 /out:"AngelGL.dll" /implib:"Release/AngelGL.lib" 
+.\Release\AngelGL.obj
+.\Release\Math.obj
+.\Release\Renderer.obj
+.\Release\StateVector.obj
+.\Release\StdAfx.obj
+]
+Creating command line "link.exe @C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP105.tmp"
+<h3>Output Window</h3>
+Compiling...
+StdAfx.cpp
+Compiling...
+AngelGL.cpp
+Math.cpp
+Renderer.cpp
+StateVector.cpp
+Generating Code...
+Linking...
+   Creating library Release/AngelGL.lib and object Release/AngelGL.exp
+<h3>
+--------------------Configuration: AGLTest - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating command line "rc.exe /l 0x41b /fo"Release/AGLTest.res" /d "NDEBUG" "D:\Roman\Projects\Programming\AngelGL\AGLTest\AGLTest.rc"" 
+Creating temporary file "C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP109.tmp" with contents
+[
+/nologo /G6 /ML /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /FR"Release/" /Fp"Release/AGLTest.pch" /Yu"stdafx.h" /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Roman\Projects\Programming\AngelGL\AGLTest\AGLTest.cpp"
+"D:\Roman\Projects\Programming\AngelGL\AGLTest\ImgLoad.cpp"
+"D:\Roman\Projects\Programming\AngelGL\Math.cpp"
+]
+Creating command line "cl.exe @C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP109.tmp" 
+Creating temporary file "C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP10A.tmp" with contents
+[
+/nologo /G6 /ML /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /FR"Release/" /Fp"Release/AGLTest.pch" /Yc"stdafx.h" /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Roman\Projects\Programming\AngelGL\AGLTest\StdAfx.cpp"
+]
+Creating command line "cl.exe @C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP10A.tmp" 
+Creating temporary file "C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP10B.tmp" with contents
+[
+JPEG.lib comctl32.lib Comdlg32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /incremental:no /pdb:"Release/AGLTest.pdb" /machine:I386 /out:"../AGLTest.exe" 
+.\Release\AGLTest.obj
+.\Release\ImgLoad.obj
+.\Release\Math.obj
+.\Release\StdAfx.obj
+.\Release\AGLTest.res
+\Roman\Projects\Programming\AngelGL\Release\AngelGL.lib
+]
+Creating command line "link.exe @C:\DOCUME~1\Sergej\LOCALS~1\Temp\RSP10B.tmp"
+<h3>Output Window</h3>
+Compiling resources...
+Compiling...
+StdAfx.cpp
+Compiling...
+AGLTest.cpp
+ImgLoad.cpp
+Math.cpp
+Generating Code...
+Linking...
+Creating command line "bscmake.exe /nologo /o"Release/AGLTest.bsc"  .\Release\StdAfx.sbr .\Release\AGLTest.sbr .\Release\ImgLoad.sbr .\Release\Math.sbr"
+Creating browse info file...
+<h3>Output Window</h3>
+
+
+
+<h3>Results</h3>
+AGLTest.exe - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>
