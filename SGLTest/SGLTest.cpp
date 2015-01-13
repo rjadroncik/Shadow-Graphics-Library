@@ -237,16 +237,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 					}
 
 					if (ButtonPressed(VK_SPACE)) { Animate   = !Animate; }
-					if (ButtonPressed(0x50))     { ShowPlane = !ShowPlane; }
-					if (ButtonPressed(0x42))     { ShowBox   = !ShowBox; }
+					if (ButtonPressed('P'))     { ShowPlane = !ShowPlane; }
+					if (ButtonPressed('B'))     { ShowBox   = !ShowBox; }
 
 					if (ButtonPressed(VK_ADD))      { Angle_Iterator[1] += 0.1f; }
 					if (ButtonPressed(VK_SUBTRACT)) { Angle_Iterator[1] -= 0.1f; }
 
-					if (ButtonPressed(0x46)) { if (IsEnabled(SGL_FOG))        { Disable(SGL_FOG); }        else { Enable(SGL_FOG); } }
-					if (ButtonPressed(0x54)) { if (IsEnabled(SGL_TEXTURE_2D)) { Disable(SGL_TEXTURE_2D); } else { Enable(SGL_TEXTURE_2D); } }
-					if (ButtonPressed(0x4C)) { if (IsEnabled(SGL_LIGHTING))   { Disable(SGL_LIGHTING); }   else { Enable(SGL_LIGHTING); } }
-					if (ButtonPressed(0x53)) { Int Result; GetIntegerv(SGL_SHADE_MODEL, &Result); if (Result == SGL_FLAT) { ShadeModel(SGL_SMOOTH); } else { ShadeModel(SGL_FLAT); } }
+					if (ButtonPressed('F')) { if (IsEnabled(SGL_FOG))        { Disable(SGL_FOG); }        else { Enable(SGL_FOG); } }
+					if (ButtonPressed('T')) { if (IsEnabled(SGL_TEXTURE_2D)) { Disable(SGL_TEXTURE_2D); } else { Enable(SGL_TEXTURE_2D); } }
+					if (ButtonPressed('L')) { if (IsEnabled(SGL_LIGHTING))   { Disable(SGL_LIGHTING); }   else { Enable(SGL_LIGHTING); } }
+					if (ButtonPressed('S')) { Int Result; GetIntegerv(SGL_SHADE_MODEL, &Result); if (Result == SGL_FLAT) { ShadeModel(SGL_SMOOTH); } else { ShadeModel(SGL_FLAT); } }
 				}
 
 				if (Animate)
@@ -751,6 +751,7 @@ void DrawScene(HDC hDC)
 	Lightfv(SGL_LIGHT0, SGL_POSITION, &LightPos[0]);
 
 	PushMatrix();
+	PushAttrib(SGL_ENABLE_BIT);
 	{
 		Disable(SGL_TEXTURE_2D);
 		Disable(SGL_LIGHTING);
@@ -767,6 +768,7 @@ void DrawScene(HDC hDC)
 		Enable(SGL_LIGHTING);
 		Enable(SGL_TEXTURE_2D);
 	}
+	PopAttrib();
 	PopMatrix();
 
 	if (ShowBox)

@@ -16,13 +16,11 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// Slovak resources
+// Slovak (Slovakia) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_SKY)
-#ifdef _WIN32
 LANGUAGE LANG_SLOVAK, SUBLANG_DEFAULT
 #pragma code_page(1250)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -68,11 +66,11 @@ BEGIN
     LTEXT           "Tab",IDC_STATIC,10,100,14,8
     LTEXT           "Toggle : Camera, Cube,",IDC_STATIC,40,100,76,8
     LTEXT           "Plane or Light",IDC_STATIC,40,110,44,8
-    LTEXT           "U",IDC_STATIC,10,129,8,8
+    LTEXT           "~",IDC_STATIC,10,129,8,8
     LTEXT           "Toggle Mouse Look*",IDC_STATIC,40,129,67,8
 END
 
-IDD_OPTIONS_FOG DIALOG  0, 0, 134, 84
+IDD_OPTIONS_FOG DIALOG 0, 0, 134, 84
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Fog Options"
 FONT 8, "MS Sans Serif"
@@ -125,7 +123,7 @@ IDB_AUTHOR              BITMAP                  "Author.bmp"
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_CONTROLS, DIALOG
     BEGIN
@@ -151,18 +149,16 @@ BEGIN
 END
 #endif    // APSTUDIO_INVOKED
 
-#endif    // Slovak resources
+#endif    // Slovak (Slovakia) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -223,7 +219,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_ABOUTBOX, DIALOG
     BEGIN
@@ -264,7 +260,7 @@ IDI_TEST                ICON                    "SGLTest.ICO"
 // Menu
 //
 
-IDC_TEST MENU 
+IDC_TEST MENU
 BEGIN
     POPUP "&File"
     BEGIN
@@ -281,7 +277,7 @@ BEGIN
     END
 END
 
-#endif    // English (U.S.) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

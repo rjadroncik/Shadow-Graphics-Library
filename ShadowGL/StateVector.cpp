@@ -43,6 +43,10 @@ namespace ShadowGLPrivate
 	Matrix4 Matrix402;
 	Matrix4 Matrix403;
 	Matrix4 Matrix404;
+
+	SRenderingContext StateStack[8];
+	UINT StateSaved[8];
+	UINT StateStackDepth = 0;
 }
 
 SHADOWGL_API void ShadowGL::ShadeModel(Enum mode)
@@ -50,8 +54,8 @@ SHADOWGL_API void ShadowGL::ShadeModel(Enum mode)
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("ShadeModel()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	if (mode == SGL_SMOOTH) { RC.SmoothShading = TRUE;  return; }
-	if (mode == SGL_FLAT)   { RC.SmoothShading = FALSE; return; }
+	if (mode == SGL_SMOOTH) { RC.Enable.SmoothShading = TRUE;  return; }
+	if (mode == SGL_FLAT)   { RC.Enable.SmoothShading = FALSE; return; }
 
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
@@ -68,12 +72,12 @@ SHADOWGL_API void ShadowGL::Enable(Enum cap)
 
 	switch (cap)
 	{
-	case SGL_LIGHTING:  { RC.Lighting    = TRUE; return; }
-	case SGL_CULL_FACE: { RC.FaceCulling = TRUE; return; }
-	case SGL_FOG:       { RC.Fog.Enabled = TRUE; return; }
+	case SGL_LIGHTING:  { RC.Enable.Lighting    = TRUE; return; }
+	case SGL_CULL_FACE: { RC.Enable.FaceCulling = TRUE; return; }
+	case SGL_FOG:       { RC.Enable.Fog         = TRUE; return; }
 
-	case SGL_TEXTURE_1D: { RC.Texturing1D = TRUE; return; }
-	case SGL_TEXTURE_2D: { RC.Texturing2D = TRUE; return; }
+	case SGL_TEXTURE_1D: { RC.Enable.Texturing1D = TRUE; return; }
+	case SGL_TEXTURE_2D: { RC.Enable.Texturing2D = TRUE; return; }
 	}
 
 	RC.ErrorCode = SGL_INVALID_ENUM;
@@ -91,12 +95,12 @@ SHADOWGL_API void ShadowGL::Disable(Enum cap)
 
 	switch (cap)
 	{
-	case SGL_LIGHTING:  { RC.Lighting    = FALSE; return; }
-	case SGL_CULL_FACE: { RC.FaceCulling = FALSE; return; }
-	case SGL_FOG:       { RC.Fog.Enabled = FALSE; return; }
+	case SGL_LIGHTING:  { RC.Enable.Lighting    = FALSE; return; }
+	case SGL_CULL_FACE: { RC.Enable.FaceCulling = FALSE; return; }
+	case SGL_FOG:       { RC.Enable.Fog         = FALSE; return; }
 
-	case SGL_TEXTURE_1D: { RC.Texturing1D = FALSE; return; }
-	case SGL_TEXTURE_2D: { RC.Texturing2D = FALSE; return; }
+	case SGL_TEXTURE_1D: { RC.Enable.Texturing1D = FALSE; return; }
+	case SGL_TEXTURE_2D: { RC.Enable.Texturing2D = FALSE; return; }
 	}
 
 	RC.ErrorCode = SGL_INVALID_ENUM;
@@ -112,14 +116,14 @@ SHADOWGL_API Boolean ShadowGL::IsEnabled(Enum cap)
 		return RC.Light[cap - SGL_LIGHT_BASE].Enabled;
 	}
 
-	if (cap == SGL_LIGHTING) { return RC.Lighting; }
+	if (cap == SGL_LIGHTING) { return RC.Enable.Lighting; }
 
-	if (cap == SGL_FOG) { return RC.Fog.Enabled; }
+	if (cap == SGL_FOG) { return RC.Enable.Fog; }
 
-	if (cap == SGL_TEXTURE_1D) { return RC.Texturing1D; }
-	if (cap == SGL_TEXTURE_2D) { return RC.Texturing2D; }
+	if (cap == SGL_TEXTURE_1D) { return RC.Enable.Texturing1D; }
+	if (cap == SGL_TEXTURE_2D) { return RC.Enable.Texturing2D; }
 
-	if (cap == SGL_NORMALIZE) { return RC.Normalize; } 
+	if (cap == SGL_NORMALIZE) { return RC.Enable.Normalize; } 
 
 	RC.ErrorCode = SGL_INVALID_ENUM;
 
@@ -235,7 +239,7 @@ SHADOWGL_API void ShadowGL::LightModeli(Enum pname, Int param)
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("LightModeli()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	if (pname == SGL_LIGHT_MODEL_LOCAL_VIEWER)	{ RC.LocalViewer = (Boolean)param; return; }
+	if (pname == SGL_LIGHT_MODEL_LOCAL_VIEWER)	{ RC.Enable.LocalViewer = (Boolean)param; return; }
 
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
@@ -245,7 +249,7 @@ SHADOWGL_API void ShadowGL::LightModelfv(Enum pname, const Float *params)
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("LightModelfv()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	if (pname == SGL_LIGHT_MODEL_LOCAL_VIEWER) { RC.LocalViewer = (Boolean)params[0]; return; }
+	if (pname == SGL_LIGHT_MODEL_LOCAL_VIEWER) { RC.Enable.LocalViewer = (Boolean)params[0]; return; }
 
 	if (pname == SGL_LIGHT_MODEL_AMBIENT) { SetVector4(RC.Ambient, params[0], params[1], params[2], params[3]); return; }
 
@@ -256,18 +260,18 @@ SHADOWGL_API void ShadowGL::GetBooleanv(Enum pname, Boolean *params)
 {
 	if (RC_OK && RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	if (pname == SGL_CULL_FACE) { *params = RC.FaceCulling; return; }
+	if (pname == SGL_CULL_FACE) { *params = RC.Enable.FaceCulling; return; }
 
 	if (pname == SGL_DEPTH_TEST) { return; } /////////////!!!!!!!!!!!!!!!!!!!!
 
-	if (pname == SGL_FOG) { *params = RC.Fog.Enabled; return; } 
+	if (pname == SGL_FOG) { *params = RC.Enable.Fog; return; } 
 
 	if ((pname >= SGL_LIGHT_BASE) && (pname < (SGL_LIGHT_BASE + MAX_LIGHTS))) { *params =  RC.Light[pname - SGL_LIGHT_BASE].Enabled; return; }
 
-	if (pname == SGL_LIGHTING)   { *params = RC.Lighting;    return; } 
-	if (pname == SGL_NORMALIZE)  { *params = RC.Normalize;   return; } 
-	if (pname == SGL_TEXTURE_1D) { *params = RC.Texturing1D; return; } 
-	if (pname == SGL_TEXTURE_2D) { *params = RC.Texturing2D; return; } 
+	if (pname == SGL_LIGHTING)   { *params = RC.Enable.Lighting;    return; } 
+	if (pname == SGL_NORMALIZE)  { *params = RC.Enable.Normalize;   return; } 
+	if (pname == SGL_TEXTURE_1D) { *params = RC.Enable.Texturing1D; return; } 
+	if (pname == SGL_TEXTURE_2D) { *params = RC.Enable.Texturing2D; return; } 
 
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
@@ -320,11 +324,13 @@ SHADOWGL_API void ShadowGL::GetIntegerv(Enum pname, Int *params)
 	if (pname == SGL_MAX_TEXTURE_SIZE)				{ *params = MAX_TEXTURE_SIZE;        return; }  
 	if (pname == SGL_MAX_VIEWPORT_DIMS)				{ params[0] = MAX_BUFFER_WIDTH;	params[1] = MAX_BUFFER_HEIGHT; return; }  
 
+	if (pname == SGL_MAX_ATTRIB_STACK_DEPTH)		{ *params = 8; return; }  	
+
 	if (pname == SGL_MODELVIEW_STACK_DEPTH)			{ *params = RC.Matrix.MVCurrent + 1; return; }
 	if (pname == SGL_PROJECTION_STACK_DEPTH)		{ *params = RC.Matrix.PCurrent + 1;  return; } 
 	if (pname == SGL_TEXTURE_STACK_DEPTH)			{ *params = RC.Matrix.TCurrent + 1;  return; } 
 
-	if (pname == SGL_SHADE_MODEL)					{ if (RC.SmoothShading) { *params = SGL_SMOOTH; } else { *params = SGL_FLAT; } return; } 
+	if (pname == SGL_SHADE_MODEL)					{ if (RC.Enable.SmoothShading) { *params = SGL_SMOOTH; } else { *params = SGL_FLAT; } return; } 
 	if (pname == SGL_TEXTURE_ENV_MODE)				{ *params = RC.TexEnvMode; return; }
 
 	if (pname == SGL_VIEWPORT)
@@ -647,7 +653,6 @@ SHADOWGL_API void ShadowGL::BindTexture(Enum target, Int texture)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-
 SHADOWGL_API void ShadowGL::PixelTransferf(Enum pname, Float param)
 {
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("PixelTransferf()"), MB_OK | MB_ICONERROR); return; } 
@@ -668,16 +673,25 @@ SHADOWGL_API void ShadowGL::PixelTransferf(Enum pname, Float param)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-/*
 SHADOWGL_API void ShadowGL::PushAttrib(Bitfield mask)
 {
-	if (mask & GL_ENABLE_BIT)
-	{
+	StateSaved[StateStackDepth] = 0;
+	StateStack[StateStackDepth] = RC;
 
+	if (mask & SGL_ENABLE_BIT)
+	{	
+		StateSaved[StateStackDepth] |= SGL_ENABLE_BIT;
 	}
+	
+	StateStackDepth++;
 }
 
 SHADOWGL_API void ShadowGL::PopAttrib()
 {
+	StateStackDepth--;
 
-}*/
+	if (StateSaved[StateStackDepth] & SGL_ENABLE_BIT)
+	{
+		RC.Enable = StateStack[StateStackDepth].Enable;
+	}
+}

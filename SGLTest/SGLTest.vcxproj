@@ -35,7 +35,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -250,10 +250,18 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Author.bmp" />
-    <Image Include="Not Meant.bmp" />
-    <Image Include="SGLTest.ico" />
-    <Image Include="ShadowGL.bmp" />
+    <Image Include="Author.bmp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Image>
+    <Image Include="Not Meant.bmp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Image>
+    <Image Include="SGLTest.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Image>
+    <Image Include="ShadowGL.bmp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ShadowGL\ShadowGL.vcxproj">

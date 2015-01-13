@@ -61,7 +61,7 @@ namespace ShadowGLPrivate
 			HDRAWDIB         hDrawDibDC;
 
 			Float4 ClearColor;
-			Float    ClearDepth;
+			Float  ClearDepth;
 
 		} Buffer;
 
@@ -144,8 +144,7 @@ namespace ShadowGLPrivate
 		struct FogState
 		{
 		//Current Fog State
-			Boolean Enabled;
-			Enum    Mode;
+			Enum Mode;
 
 			Float Start;
 			Float End;
@@ -196,12 +195,18 @@ namespace ShadowGLPrivate
 
 		} Light[MAX_LIGHTS];
 
-		Boolean SmoothShading;
-		Boolean Lighting;
-		Boolean Normalize;
-		Boolean LocalViewer;
-		Boolean Texturing1D;
-		Boolean Texturing2D;
+		struct SEnable
+		{
+			Boolean SmoothShading;
+			Boolean Lighting;
+			Boolean Normalize;
+			Boolean LocalViewer;
+			Boolean Texturing1D;
+			Boolean Texturing2D;
+			Boolean FaceCulling;
+			Boolean Fog;
+
+		} Enable;
 
 		Float4 Ambient;
 
@@ -212,7 +217,6 @@ namespace ShadowGLPrivate
 		Int TexCurrent2D;
 		Boolean TexNameUsed[MAX_TEXTURES];
 
-		Boolean FaceCulling;
 		Enum CullStyle;
 		Enum FrontFace;
 

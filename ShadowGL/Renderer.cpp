@@ -185,7 +185,7 @@ namespace ShadowGLPrivate
 		}
 
 	//Face Culling	 
-		if (RC.FaceCulling)
+		if (RC.Enable.FaceCulling)
 		{
 		//Find Normal
 			if (RC.FrontFace == SGL_CCW)	{ MakeNormal(Float301, (Float3&)RC.Primitive.Vertex[0].EyeCoord, (Float3&)RC.Primitive.Vertex[1].EyeCoord, (Float3&)RC.Primitive.Vertex[2].EyeCoord); }
@@ -239,7 +239,7 @@ namespace ShadowGLPrivate
 
 		RC.Primitive.ClipArray = 1;
 
-		if (!RC.SmoothShading)
+		if (!RC.Enable.SmoothShading)
 		{
 			//RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0].ObjColor[0] = RC.Primitive.Vertex[0].ObjColor[0];
 			//RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0].ObjColor[1] = RC.Primitive.Vertex[0].ObjColor[1];
@@ -308,7 +308,7 @@ namespace ShadowGLPrivate
 				//CopyVector4(outputVertex[VertexIndex].,	inputVertex[v1].LitColor);
 				//CopyVector4(outputVertex[VertexIndex].EyeNormal, inputVertex[v1].EyeNormal);
 
-				if (RC.SmoothShading)
+				if (RC.Enable.SmoothShading)
 				{
 					outputVertex[VertexIndex].LitColor[0] = inputVertex[v1].LitColor[0] * Distance01 + inputVertex[v2].LitColor[0] * t;
 					outputVertex[VertexIndex].LitColor[1] = inputVertex[v1].LitColor[1] * Distance01 + inputVertex[v2].LitColor[1] * t;
@@ -325,7 +325,7 @@ namespace ShadowGLPrivate
 					//outputVertex[VertexIndex].ObjNormal[2] = inputVertex[v1].ObjNormal[2] * Distance01 + inputVertex[v2].ObjNormal[2] * t;
 				}
 
-				if (RC.Texturing2D)
+				if (RC.Enable.Texturing2D)
 				{
 					outputVertex[VertexIndex].ObjTexCoord[0] = inputVertex[v1].ObjTexCoord[0] * Distance01 + inputVertex[v2].ObjTexCoord[0] * t;
 					outputVertex[VertexIndex].ObjTexCoord[1] = inputVertex[v1].ObjTexCoord[1] * Distance01 + inputVertex[v2].ObjTexCoord[1] * t;
@@ -372,14 +372,14 @@ namespace ShadowGLPrivate
 
 		//Enable/disable smooth shading 
 
-		UINT  VerticesToProcess = (RC.SmoothShading) ? (count) : (1);
+		UINT  VerticesToProcess = (RC.Enable.SmoothShading) ? (count) : (1);
 		Float Attenuation;
 		Float SpotFactor;
 
 		//Lighting calculations
 		for (UInt i = 0; i < VerticesToProcess; i++)
 		{
-			if (RC.Lighting)
+			if (RC.Enable.Lighting)
 			{
 				//Global contributions (emmision + ambient)
 				CopyVector3(  (Float3&)vertex[i].LitColor, (Float3&)RC.Material.Emission);
@@ -444,7 +444,7 @@ namespace ShadowGLPrivate
 					//Specular contribution
 					if (DiffuseFactor != 0)
 					{
-						if (RC.LocalViewer)
+						if (RC.Enable.LocalViewer)
 						{
 							NormalizeVector3(Float302, (Float3&)vertex[i].EyeCoord);
 							SubtractVectors3(Float301, Float301, Float302);
@@ -504,19 +504,19 @@ namespace ShadowGLPrivate
 			vertex[i].ViewCoord[2] = vertex[i].NormCoord[2];// / 2 + 0.5f;  		
 
 			//Process texture coordinates
-			if (RC.Texturing2D)
+			if (RC.Enable.Texturing2D)
 			{
 				MultiplyMatrix4Vector4(vertex[i].FinTexCoord, RC.Matrix.Texture[RC.Matrix.TCurrent], vertex[i].ObjTexCoord);
 			}
 		}
 
 		//Enable/disable smooth shading 
-		UINT VerticesToProcess = (RC.SmoothShading) ? (count) : (1);
+		UINT VerticesToProcess = (RC.Enable.SmoothShading) ? (count) : (1);
 
 		//Lighting calculations
 		for (UInt i = 0; i < VerticesToProcess; i++)
 		{
-			if (RC.Fog.Enabled)
+			if (RC.Enable.Fog)
 			{
 				float FogContribution = 0;
 
@@ -542,7 +542,7 @@ namespace ShadowGLPrivate
 
 				vertex[i].FogFactor = FogContribution;
 
-				if (!RC.Texturing1D && !RC.Texturing2D)
+				if (!RC.Enable.Texturing1D && !RC.Enable.Texturing2D)
 				{
 					vertex[i].LitColor[0] = FogContribution * vertex[i].LitColor[0] + InverseFogContribution * RC.Fog.Color[0];
 					vertex[i].LitColor[1] = FogContribution * vertex[i].LitColor[1] + InverseFogContribution * RC.Fog.Color[1];
@@ -574,7 +574,7 @@ namespace ShadowGLPrivate
 				RS.V3 = i + 2;
 			
 				//Init Values For Flat Shading
-				if (!RC.SmoothShading)
+				if (!RC.Enable.SmoothShading)
 				{
 					CopyVector4(RS.Line.Current.Color, vertex[0].LitColor); 
 
@@ -623,7 +623,7 @@ namespace ShadowGLPrivate
 		//Prepare other values
 		CopyVector4(RS.Fog.Color, RC.Fog.Color);
 
-		if (RC.Texturing2D)
+		if (RC.Enable.Texturing2D)
 		{
 			pTexture              = Texture[RC.TexCurrent2D].pData;
 			TextureWidth          = Texture[RC.TexCurrent2D].Width;
@@ -744,7 +744,7 @@ namespace ShadowGLPrivate
 		RS.Line.Length = (Float)(RS.Line.Right.X - RS.Line.Left.X);
 
 		//Prepare color
-		if (RC.SmoothShading)
+		if (RC.Enable.SmoothShading)
 		{
 			RS.Line.Left.Color[0] = B_LeftCoord[0] * vertex1->LitColor[0] + B_LeftCoord[1] * vertex2->LitColor[0] + B_LeftCoord[2] * vertex3->LitColor[0];
 			RS.Line.Left.Color[1] = B_LeftCoord[0] * vertex1->LitColor[1] + B_LeftCoord[1] * vertex2->LitColor[1] + B_LeftCoord[2] * vertex3->LitColor[1];
@@ -761,7 +761,7 @@ namespace ShadowGLPrivate
 	//	else { CopyVector4(&RS.Line.Current.Color[0], &vertex1->LitColor[0]); }
 
 		//Prepare texture coords
-		if (RC.Texturing2D)
+		if (RC.Enable.Texturing2D)
 		{
 			RS.Line.Left.Numerator.S  = B_LeftCoord[0]  * vertex1->FinTexCoord[0] / RS.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[0] / RS.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[0] / RS.Vertex[2].Clip.W;
 			RS.Line.Right.Numerator.S = B_RightCoord[0] * vertex1->FinTexCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[0] / RS.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[0] / RS.Vertex[2].Clip.W;
@@ -781,9 +781,9 @@ namespace ShadowGLPrivate
 			RS.Line.Current.Denominator.S = RS.Line.Left.Denominator.S;
 			RS.Line.Current.Denominator.T = RS.Line.Left.Denominator.T;
 
-			if (RC.Fog.Enabled)
+			if (RC.Enable.Fog)
 			{
-				if (RC.SmoothShading)
+				if (RC.Enable.SmoothShading)
 				{
 					RS.Line.Left.Fog    = B_LeftCoord[0]  * vertex1->FogFactor + B_LeftCoord[1]  * vertex2->FogFactor + B_LeftCoord[2]  * vertex3->FogFactor;
 					RS.Line.Right.Fog   = B_RightCoord[0] * vertex1->FogFactor + B_RightCoord[1] * vertex2->FogFactor + B_RightCoord[2] * vertex3->FogFactor;
@@ -798,13 +798,13 @@ namespace ShadowGLPrivate
 		{ 
 			RS.Line.Iterator.Z = (RS.Line.Right.Z - RS.Line.Left.Z) / RS.Line.Length; 
 
-			if (RC.SmoothShading)
+			if (RC.Enable.SmoothShading)
 			{
 				SubtractVectors4(RS.Line.Iterator.Color, RS.Line.Right.Color,    RS.Line.Left.Color);
 				DivideVector4   (RS.Line.Iterator.Color, RS.Line.Iterator.Color, RS.Line.Length);
 			}
 
-			if (RC.Texturing2D)
+			if (RC.Enable.Texturing2D)
 			{
 				RS.Line.Iterator.Numerator.S   = (RS.Line.Right.Numerator.S   - RS.Line.Left.Numerator.S)   / RS.Line.Length;
 				RS.Line.Iterator.Denominator.S = (RS.Line.Right.Denominator.S - RS.Line.Left.Denominator.S) / RS.Line.Length;
@@ -812,16 +812,16 @@ namespace ShadowGLPrivate
 				RS.Line.Iterator.Numerator.T   = (RS.Line.Right.Numerator.T   - RS.Line.Left.Numerator.T)   / RS.Line.Length;
 				RS.Line.Iterator.Denominator.T = (RS.Line.Right.Denominator.T - RS.Line.Left.Denominator.T) / RS.Line.Length;
 
-				if (RC.Fog.Enabled) { RS.Line.Iterator.Fog = (RS.Line.Right.Fog - RS.Line.Left.Fog) / RS.Line.Length; }
+				if (RC.Enable.Fog) { RS.Line.Iterator.Fog = (RS.Line.Right.Fog - RS.Line.Left.Fog) / RS.Line.Length; }
 			}
 		}
 		else 
 		{
 			RS.Line.Iterator.Z = 0; 
 
-			if (RC.SmoothShading) { ZeroVector4(RS.Line.Iterator.Color); }
+			if (RC.Enable.SmoothShading) { ZeroVector4(RS.Line.Iterator.Color); }
 
-			if (RC.Texturing2D)
+			if (RC.Enable.Texturing2D)
 			{
 				RS.Line.Iterator.Numerator.S   = 0;
 				RS.Line.Iterator.Denominator.S = 0;
@@ -829,12 +829,12 @@ namespace ShadowGLPrivate
 				RS.Line.Iterator.Numerator.T   = 0;
 				RS.Line.Iterator.Denominator.T = 0;
 
-				if (RC.Fog.Enabled) { RS.Line.Iterator.Fog = 0; }
+				if (RC.Enable.Fog) { RS.Line.Iterator.Fog = 0; }
 			}
 		}
 
 		//Rasterize line
-		if (RC.Texturing2D)
+		if (RC.Enable.Texturing2D)
 		{
 			Int Texel = 0;
 
@@ -865,7 +865,7 @@ namespace ShadowGLPrivate
 				RS.Pixel.Color[3] = RS.Line.Current.Color[3];
 	*/
 				//Apply fog
-				if (RC.Fog.Enabled)
+				if (RC.Enable.Fog)
 				{
 					RS.Pixel.Color[0] = RS.Line.Current.Fog * RS.Pixel.Color[0] + (1 - RS.Line.Current.Fog) * RS.Fog.Color[0];
 					RS.Pixel.Color[1] = RS.Line.Current.Fog * RS.Pixel.Color[1] + (1 - RS.Line.Current.Fog) * RS.Fog.Color[1];
@@ -889,12 +889,12 @@ namespace ShadowGLPrivate
 				RS.Pixel.Index++;
 
 				//Update vertex color 
-				if (RC.SmoothShading)
+				if (RC.Enable.SmoothShading)
 				{ 
 					AddVectors4(RS.Line.Current.Color, RS.Line.Current.Color, RS.Line.Iterator.Color);	
 
 					//Update fog state
-					if (RC.Fog.Enabled) { RS.Line.Current.Fog += RS.Line.Iterator.Fog; }
+					if (RC.Enable.Fog) { RS.Line.Current.Fog += RS.Line.Iterator.Fog; }
 				}
 
 				//Update z buffer state
@@ -910,7 +910,7 @@ namespace ShadowGLPrivate
 		}
 		else
 		{
-			if (RC.SmoothShading)
+			if (RC.Enable.SmoothShading)
 			{
 				for (X_LeftClamped; X_LeftClamped <= (Int)X_RightClamped; X_LeftClamped++)
 				{

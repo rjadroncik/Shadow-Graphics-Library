@@ -30,6 +30,7 @@ using namespace SCFMathematics;
 #define	SGL_MAX_LIGHTS						1013
 #define	SGL_MAX_TEXTURE_SIZE				1014
 #define	SGL_MAX_VIEWPORT_DIMS				1015
+#define SGL_MAX_ATTRIB_STACK_DEPTH          1016
 
 #define	SGL_COLOR_CLEAR_VALUE				1020
 #define	SGL_CURRENT_NORMAL					1021 
@@ -161,7 +162,7 @@ using namespace SCFMathematics;
 #define SGL_HINT_BIT                       0x00008000
 #define SGL_TEXTURE_BIT                    0x00040000
 #define SGL_SCISSOR_BIT                    0x00080000
-#define SGL_ALL_ATTRIB_BITS                0xFFFFFFFF
+#define SGL_ALL_ATTRIB_BITS                0x000FFFFF
 
 //PixelTransfer() argument definitions
 #define	SGL_RED_SCALE						2410

@@ -301,4 +301,7 @@ namespace ShadowGL
 	void BindTexture(Enum target, Int texture);
 
 	void PixelTransferf(Enum pname, Float param);
+
+	void PushAttrib(Bitfield mask);
+	void PopAttrib();
 }

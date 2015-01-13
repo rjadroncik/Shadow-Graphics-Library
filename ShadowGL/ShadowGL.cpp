@@ -111,7 +111,7 @@ SHADOWGL_API HRC ShadowGL::CreateContext(HDC hDC)
 	pNewRC->Material.Shininess = 0;
 
 	//Initialize fog state
-	pNewRC->Fog.Enabled	= FALSE;
+	pNewRC->Enable.Fog	= FALSE;
 	pNewRC->Fog.Mode	= SGL_EXP;
 
 	pNewRC->Fog.Density	= 1;
@@ -123,7 +123,7 @@ SHADOWGL_API HRC ShadowGL::CreateContext(HDC hDC)
 	//Rendering state
 	SetVector4(pNewRC->Ambient, 0.2f, 0.2f, 0.2f, 1);
 
-	pNewRC->FaceCulling = TRUE;
+	pNewRC->Enable.FaceCulling = TRUE;
 	pNewRC->CullStyle   = SGL_BACK;
 	pNewRC->FrontFace   = SGL_CCW;
 
@@ -204,18 +204,18 @@ SHADOWGL_API HRC ShadowGL::CreateContext(HDC hDC)
 	SetVector4(pNewRC->Light[0].Specular, 1, 1, 1, 1);
 
 	//Rendering state
-	pNewRC->Lighting		= FALSE;
-	pNewRC->LocalViewer		= FALSE;
+	pNewRC->Enable.Lighting		    = FALSE;
+	pNewRC->Enable.LocalViewer		= FALSE;
 	SetVector4(pNewRC->Ambient, 0.2f, 0.2f, 0.2f, 1);
-	pNewRC->SmoothShading	= FALSE;
-	pNewRC->Normalize		= FALSE;
+	pNewRC->Enable.SmoothShading	= FALSE;
+	pNewRC->Enable.Normalize		= FALSE;
 
-	pNewRC->FaceCulling	= TRUE;
+	pNewRC->Enable.FaceCulling	= TRUE;
 	pNewRC->CullStyle	= SGL_BACK;
 	pNewRC->FrontFace	= SGL_CCW;
 //	pNewRC->PolygonMode	= FILL;
 
-	pNewRC->Texturing2D	= FALSE;
+	pNewRC->Enable.Texturing2D	= FALSE;
 	ZeroVector4(pNewRC->Ambient);
 	pNewRC->TexEnvMode	= SGL_MODULATE;
 
