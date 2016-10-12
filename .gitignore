@@ -5,3 +5,4 @@ ipch
 *.sdf
 *.tlog
 *.opensdf
+/ShadowGL.VC.db

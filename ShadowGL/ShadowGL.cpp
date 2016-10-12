@@ -2,9 +2,10 @@
 
 #include "Extern.h"
 
-#include <Vfw.h>
-
 #include <SCFObjectExtensions.h>
+
+//#define WIN32_LEAN_AND_MEAN
+//#include <windows.h>
 
 //Main Objects
 namespace ShadowGLPrivate
@@ -17,7 +18,6 @@ namespace ShadowGLPrivate
 }
 
 using namespace SCFMathematics;
-using namespace SCFBase;
 using namespace ShadowGLPrivate;
 
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)

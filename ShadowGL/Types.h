@@ -1,10 +1,11 @@
 #pragma once
 
-#include <SCFGraphics.h>
-//#include <SCFStandardUndef.h>
-
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <Vfw.h>
+
+#include <SCFGraphics.h>
+//#include <SCFStandardUndef.h>
 
 #ifdef SHADOWGL_EXPORTS
 #define SHADOWGL_API __declspec(dllexport)
