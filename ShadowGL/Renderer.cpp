@@ -866,10 +866,18 @@ namespace ShadowGLPrivate
 					float uMinusHalf = TextureWidth * RS.Line.Current.S - 0.5f;
 					float vMinusHalf = TextureHeight * RS.Line.Current.T - 0.5f;
 
-					Int i0 = ((Int)floor(uMinusHalf));
-					Int j0 = ((Int)floor(vMinusHalf));
-					Int i1 = (i0 + 1) % TextureWidth;
-					Int j1 = (j0 + 1) % TextureHeight;
+					if (uMinusHalf < 0) { uMinusHalf = 0; }
+					if (vMinusHalf < 0) { vMinusHalf = 0; }
+
+					Int i0 = (Int)uMinusHalf;
+					Int j0 = (Int)vMinusHalf;
+					Int i1 = i0 + 1;
+					Int j1 = j0 + 1;
+
+					if (i0 == TextureWidth)  { i0--; }
+					if (j0 == TextureHeight) { j0--; }
+					if (i1 == TextureWidth)  { i1--; }
+					if (j1 == TextureHeight) { j1--; }
 
 					//Fetch 4 texels
 					UINT Texel00 = *(UINT*)(&pTexture[(j0 * TextureWidth + i0) * RS.Texture.Components]);
@@ -877,13 +885,8 @@ namespace ShadowGLPrivate
 					UINT Texel10 = *(UINT*)(&pTexture[(j1 * TextureWidth + i0) * RS.Texture.Components]);
 					UINT Texel11 = *(UINT*)(&pTexture[(j1 * TextureWidth + i1) * RS.Texture.Components]);
 
-					double tmp;
-
-					float alpha = modf(uMinusHalf, &tmp);
-					float beta = modf(vMinusHalf, &tmp);
-
-					//float alpha = uMinusHalf - (Int)uMinusHalf;
-					//float beta  = vMinusHalf - (Int)vMinusHalf;
+					float alpha = uMinusHalf - (Int)uMinusHalf;
+					float beta  = vMinusHalf - (Int)vMinusHalf;
 
 					RS.Pixel.Color[0] = RS.Line.Current.Color[0] * ((1 - alpha) * (1 - beta) * GET_R_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_R_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_R_NOMALIZED(Texel10) + alpha * beta * GET_R_NOMALIZED(Texel11));
 					RS.Pixel.Color[1] = RS.Line.Current.Color[1] * ((1 - alpha) * (1 - beta) * GET_G_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_G_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_G_NOMALIZED(Texel10) + alpha * beta * GET_G_NOMALIZED(Texel11));
