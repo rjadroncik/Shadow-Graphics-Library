@@ -7,7 +7,6 @@
 #define IDD_ABOUTBOX                    103
 #define IDM_ABOUT                       104
 #define IDM_EXIT                        105
-#define IDI_TEST                        107
 #define IDI_SMALL                       108
 #define IDC_TEST                        109
 #define IDR_MAINFRAME                   128
@@ -16,6 +15,8 @@
 #define IDD_CONTROLS                    139
 #define IDD_OPTIONS_FOG                 146
 #define IDB_AUTHOR                      147
+#define IDI_ICON1                       148
+#define IDI_TEST                        148
 #define IDC_VERSION                     1000
 #define IDC_COLOR_R                     1001
 #define IDC_COLOR_G                     1002
@@ -34,7 +35,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        148
+#define _APS_NEXT_RESOURCE_VALUE        149
 #define _APS_NEXT_COMMAND_VALUE         32777
 #define _APS_NEXT_CONTROL_VALUE         1013
 #define _APS_NEXT_SYMED_VALUE           110
