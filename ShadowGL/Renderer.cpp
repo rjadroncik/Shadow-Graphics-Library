@@ -37,6 +37,16 @@ namespace ShadowGLPrivate
 	}
 }
 
+#define GET_R(pixel) ((BYTE)(pixel))
+#define GET_G(pixel) ((BYTE)(pixel >> 8))
+#define GET_B(pixel) ((BYTE)(pixel >> 16))
+#define GET_A(pixel) ((BYTE)(pixel >> 24))
+
+#define GET_R_NOMALIZED(pixel) (GET_R(pixel) * 0.00392156862745098f)
+#define GET_G_NOMALIZED(pixel) (GET_G(pixel) * 0.00392156862745098f)
+#define GET_B_NOMALIZED(pixel) (GET_B(pixel) * 0.00392156862745098f)
+#define GET_A_NOMALIZED(pixel) (GET_A(pixel) * 0.00392156862745098f)
+
 void SHADOWGL_API ShadowGL::Begin(Enum primType)
 {
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("Begin()"), MB_OK | MB_ICONERROR); return; } 
@@ -836,7 +846,7 @@ namespace ShadowGLPrivate
 		//Rasterize line
 		if (RC.Enable.Texturing2D)
 		{
-			Int Texel = 0;
+			UINT Texel = 0;
 
 			for (X_LeftClamped; X_LeftClamped <= X_RightClamped; X_LeftClamped++)
 			{
@@ -850,13 +860,49 @@ namespace ShadowGLPrivate
 				if (RS.Line.Current.T > 1) { RS.Line.Current.T -= (Int)RS.Line.Current.T; }
 				if (RS.Line.Current.T < 0) { RS.Line.Current.T -= (Int)RS.Line.Current.T - 1; }
 
-				//Fetch texel
-				Texel = *(UINT*)(&pTexture[((Int)(TextureHeight * RS.Line.Current.T) * TextureWidth + (Int)(TextureWidth * RS.Line.Current.S)) * RS.Texture.Components]);
-				
-				RS.Pixel.Color[0] = RS.Line.Current.Color[0] * ((BYTE)(Texel)       * 0.00392156862745098f);
-				RS.Pixel.Color[1] = RS.Line.Current.Color[1] * ((BYTE)(Texel >> 8)  * 0.00392156862745098f);
-				RS.Pixel.Color[2] = RS.Line.Current.Color[2] * ((BYTE)(Texel >> 16) * 0.00392156862745098f);
-				RS.Pixel.Color[3] = RS.Line.Current.Color[3];
+				//Use linear filtering 
+				if (true)
+				{
+					float uMinusHalf = TextureWidth * RS.Line.Current.S - 0.5f;
+					float vMinusHalf = TextureHeight * RS.Line.Current.T - 0.5f;
+
+					if (uMinusHalf < 0) { uMinusHalf = 0; }
+					if (vMinusHalf < 0) { vMinusHalf = 0; }
+
+					Int i0 = (Int)uMinusHalf;
+					Int j0 = (Int)vMinusHalf;
+					Int i1 = i0 + 1;
+					Int j1 = j0 + 1;
+
+					if (i0 == TextureWidth)  { i0--; }
+					if (j0 == TextureHeight) { j0--; }
+					if (i1 == TextureWidth)  { i1--; }
+					if (j1 == TextureHeight) { j1--; }
+
+					//Fetch 4 texels
+					UINT Texel00 = *(UINT*)(&pTexture[(j0 * TextureWidth + i0) * RS.Texture.Components]);
+					UINT Texel01 = *(UINT*)(&pTexture[(j0 * TextureWidth + i1) * RS.Texture.Components]);
+					UINT Texel10 = *(UINT*)(&pTexture[(j1 * TextureWidth + i0) * RS.Texture.Components]);
+					UINT Texel11 = *(UINT*)(&pTexture[(j1 * TextureWidth + i1) * RS.Texture.Components]);
+
+					float alpha = uMinusHalf - (Int)uMinusHalf;
+					float beta  = vMinusHalf - (Int)vMinusHalf;
+
+					RS.Pixel.Color[0] = RS.Line.Current.Color[0] * ((1 - alpha) * (1 - beta) * GET_R_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_R_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_R_NOMALIZED(Texel10) + alpha * beta * GET_R_NOMALIZED(Texel11));
+					RS.Pixel.Color[1] = RS.Line.Current.Color[1] * ((1 - alpha) * (1 - beta) * GET_G_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_G_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_G_NOMALIZED(Texel10) + alpha * beta * GET_G_NOMALIZED(Texel11));
+					RS.Pixel.Color[2] = RS.Line.Current.Color[2] * ((1 - alpha) * (1 - beta) * GET_B_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_B_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_B_NOMALIZED(Texel10) + alpha * beta * GET_B_NOMALIZED(Texel11));
+					RS.Pixel.Color[3] = RS.Line.Current.Color[3];
+				}
+				else
+				{
+					//Fetch texel
+					Texel = *(UINT*)(&pTexture[((Int)(TextureHeight * RS.Line.Current.T) * TextureWidth + (Int)(TextureWidth * RS.Line.Current.S)) * RS.Texture.Components]);
+
+					RS.Pixel.Color[0] = RS.Line.Current.Color[0] * ((BYTE)(Texel)       * 0.00392156862745098f);
+					RS.Pixel.Color[1] = RS.Line.Current.Color[1] * ((BYTE)(Texel >> 8)  * 0.00392156862745098f);
+					RS.Pixel.Color[2] = RS.Line.Current.Color[2] * ((BYTE)(Texel >> 16) * 0.00392156862745098f);
+					RS.Pixel.Color[3] = RS.Line.Current.Color[3];
+				}
 
 				//Implicitly use SGL_MODULATE as texture environment mode
 	/*			RS.Pixel.Color[0] = RS.Line.Current.Color[0] * (pTexture[TexelIndex]		* 0.00392156862745098f);
@@ -872,12 +918,9 @@ namespace ShadowGLPrivate
 					RS.Pixel.Color[2] = RS.Line.Current.Fog * RS.Pixel.Color[2] + (1 - RS.Line.Current.Fog) * RS.Fog.Color[2];
 				}
 
-				RS.Pixel.Write.Color  = (UByte)(255 * RS.Pixel.Color[3]);
-				RS.Pixel.Write.Color <<= 8;
-				RS.Pixel.Write.Color += (UByte)(255 * RS.Pixel.Color[0]);
-				RS.Pixel.Write.Color <<= 8;
-				RS.Pixel.Write.Color += (UByte)(255 * RS.Pixel.Color[1]);
-				RS.Pixel.Write.Color <<= 8;
+				RS.Pixel.Write.Color  = (UByte)(255 * RS.Pixel.Color[3]); RS.Pixel.Write.Color <<= 8;
+				RS.Pixel.Write.Color += (UByte)(255 * RS.Pixel.Color[0]); RS.Pixel.Write.Color <<= 8;
+				RS.Pixel.Write.Color += (UByte)(255 * RS.Pixel.Color[1]); RS.Pixel.Write.Color <<= 8;
 				RS.Pixel.Write.Color += (UByte)(255 * RS.Pixel.Color[2]);
 
 				//Perform depth test & write to buffers
@@ -914,12 +957,9 @@ namespace ShadowGLPrivate
 			{
 				for (X_LeftClamped; X_LeftClamped <= (Int)X_RightClamped; X_LeftClamped++)
 				{
-					RS.Pixel.Write.Color  = (UByte)(255 * RS.Line.Current.Color[3]);
-					RS.Pixel.Write.Color <<= 8;
-					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[0]);
-					RS.Pixel.Write.Color <<= 8;
-					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[1]);
-					RS.Pixel.Write.Color <<= 8;
+					RS.Pixel.Write.Color  = (UByte)(255 * RS.Line.Current.Color[3]); RS.Pixel.Write.Color <<= 8;
+					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[0]); RS.Pixel.Write.Color <<= 8;
+					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[1]); RS.Pixel.Write.Color <<= 8;
 					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[2]);
 
 					//Scan one line
