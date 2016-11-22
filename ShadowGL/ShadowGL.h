@@ -194,7 +194,7 @@ using namespace SCFMathematics;
 
 namespace ShadowGL
 {
-	//Base AngelGL Information
+	//Base ShadowGL Information
 	const UByte VERSION[]      = "0.900a";
 	const Int   VERSION_NUMBER = 900;
 

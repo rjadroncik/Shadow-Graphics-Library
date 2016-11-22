@@ -246,7 +246,7 @@ namespace ShadowGLPrivate
 
 			struct SWrite
 			{
-				Int Color;
+				UINT Color;
 
 			} Write;
 
