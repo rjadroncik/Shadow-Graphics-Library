@@ -114,8 +114,11 @@ END
 //
 
 IDB_ANGELGL             BITMAP                  "ShadowGL.bmp"
+
 IDB_NOT_MEANT           BITMAP                  "Not Meant.bmp"
+
 IDB_AUTHOR              BITMAP                  "Author.bmp"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -170,10 +173,9 @@ STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About ShadowGL Test"
 FONT 8, "MS Sans Serif", 0, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "So What !",IDOK,209,89,41,13,WS_GROUP | NOT WS_TABSTOP
     CONTROL         "",IDC_STATIC,"Static",SS_WHITERECT,0,0,257,26
-    CONTROL         134,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,108,4,149,17
-    CONTROL         131,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,0,0,61,26
+    CONTROL         IDB_NOT_MEANT,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,108,4,147,17
+    CONTROL         IDB_ANGELGL,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,0,0,61,26
     LTEXT           "Using : ShadowGL.dll",IDC_STATIC,14,39,87,8,SS_NOPREFIX
     LTEXT           "Version:",IDC_STATIC,14,68,28,8
     LTEXT           "Copyright (C) 2007",IDC_STATIC,14,84,78,8
@@ -184,8 +186,8 @@ BEGIN
     GROUPBOX        "",IDC_STATIC,108,28,94,57
     LTEXT           "0.000",IDC_VERSION,42,68,50,8
     LTEXT           "Shadow Graphic Library",IDC_STATIC,14,53,78,8
-    CONTROL         147,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE,209,32,41,54,WS_EX_STATICEDGE
     LTEXT           "14 June 2007",IDC_STATIC,115,92,44,8
+    DEFPUSHBUTTON   "OK",IDOK,209,89,41,13,WS_GROUP | NOT WS_TABSTOP
 END
 
 
@@ -248,15 +250,6 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
-// Icon
-//
-
-// Icon with lowest ID value placed first to ensure application icon
-// remains consistent on all systems.
-IDI_TEST                ICON                    "SGLTest.ICO"
-
-/////////////////////////////////////////////////////////////////////////////
-//
 // Menu
 //
 
@@ -275,6 +268,27 @@ BEGIN
         MENUITEM "&About ...",                  IDM_ABOUT
         MENUITEM "&Controls",                   IDM_CONTROLS
     END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_TEST                ICON                    "E:\\dev\\Shadow\\Shadow Graphics Library\\ShadowGL\\ShadowGL.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_ABOUTBOX AFX_DIALOG_LAYOUT
+BEGIN
+    0
 END
 
 #endif    // English (United States) resources

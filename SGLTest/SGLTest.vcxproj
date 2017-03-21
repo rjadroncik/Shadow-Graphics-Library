@@ -251,13 +251,11 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\ShadowGL\ShadowGL.ico" />
     <Image Include="Author.bmp">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Image>
     <Image Include="Not Meant.bmp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Image>
-    <Image Include="SGLTest.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Image>
     <Image Include="ShadowGL.bmp">

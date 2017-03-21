@@ -48,10 +48,10 @@
     <Image Include="Not Meant.bmp">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="SGLTest.ico">
+    <Image Include="ShadowGL.bmp">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="ShadowGL.bmp">
+    <Image Include="..\ShadowGL\ShadowGL.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
