@@ -6,3 +6,4 @@ ipch
 *.tlog
 *.opensdf
 /ShadowGL.VC.db
+.vs/
