@@ -184,24 +184,24 @@ namespace ShadowGLPrivate
 {
 	bool CullPrimitive()
 	{
-	//Prepare Normal Transformation Matrix
+	    //Prepare Normal Transformation Matrix
 		TruncateTopLeftToMatrix3(Matrix301, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
 
-	//Vertex Processing
+	    //Vertex Processing
 		for (UByte i = 0; i < RC.Primitive.MaxVertices; i++)
 		{
 		//Create tVertex Eye Coordinates
 			MultiplyMatrix4Vector4(RC.Primitive.Vertex[i].EyeCoord, RC.Matrix.ModelView[RC.Matrix.MVCurrent], RC.Primitive.Vertex[i].ObjCoord);
 		}
 
-	//Face Culling	 
+	    //Face Culling	 
 		if (RC.Enable.FaceCulling)
 		{
-		//Find Normal
+		    //Find Normal
 			if (RC.FrontFace == SGL_CCW)	{ MakeNormal(Float301, (Float3&)RC.Primitive.Vertex[0].EyeCoord, (Float3&)RC.Primitive.Vertex[1].EyeCoord, (Float3&)RC.Primitive.Vertex[2].EyeCoord); }
 			else							{ MakeNormal(Float301, (Float3&)RC.Primitive.Vertex[2].EyeCoord, (Float3&)RC.Primitive.Vertex[1].EyeCoord, (Float3&)RC.Primitive.Vertex[0].EyeCoord); }
 
-		//Find Triangle Center to Eye Direction Vector (Assuming Eye at (0, 0, 0)) 
+		    //Find Triangle Center to Eye Direction Vector (Assuming Eye at (0, 0, 0)) 
 			Float302[0] = (RC.Primitive.Vertex[0].EyeCoord[0] + RC.Primitive.Vertex[1].EyeCoord[0] + RC.Primitive.Vertex[2].EyeCoord[0]) / 3.0f;
 			Float302[1] = (RC.Primitive.Vertex[0].EyeCoord[1] + RC.Primitive.Vertex[1].EyeCoord[1] + RC.Primitive.Vertex[2].EyeCoord[1]) / 3.0f;
 			Float302[2] = (RC.Primitive.Vertex[0].EyeCoord[2] + RC.Primitive.Vertex[1].EyeCoord[2] + RC.Primitive.Vertex[2].EyeCoord[2]) / 3.0f;
@@ -209,7 +209,7 @@ namespace ShadowGLPrivate
 
 			float AngleCose = MultiplyVectors3(Float301, Float302);
 
-		//Determine Whether to Continue or Not
+		    //Determine Whether to Continue or Not
 			if (RC.CullStyle == SGL_BACK) { if (AngleCose > 0) { return TRUE; } }
 			else { if (AngleCose < 0) { return TRUE; } }
 		}

@@ -3,6 +3,7 @@
 #include "Extern.h"
 
 #include <SCFObjectExtensions.h>
+#include <intrin.h>
 
 //#define WIN32_LEAN_AND_MEAN
 //#include <windows.h>
@@ -281,7 +282,7 @@ SHADOWGL_API void ShadowGL::SwapBuffers(HDC hDC)
 	RC.Buffer.BitmapInfoHeader.biClrUsed		= 0;
 	RC.Buffer.BitmapInfoHeader.biClrImportant	= 0;
 
-	DrawDibDraw(RC.Buffer.hDrawDibDC, hDC, 0, 0, RC.View.Size[0], RC.View.Size[1], &RC.Buffer.BitmapInfoHeader, Buffer.Back, 0, 0, -1, -1, NULL);
+	DrawDibDraw(RC.Buffer.hDrawDibDC, hDC, 0, 0, RC.View.Size[0], RC.View.Size[1], &RC.Buffer.BitmapInfoHeader, Buffer.Back, 0, 0, -1, -1, 0);
 }
 
 SHADOWGL_API void ShadowGL::Viewport(Int posX, Int posY, SizeI width, SizeI height)
@@ -658,23 +659,19 @@ SHADOWGL_API void ShadowGL::Clear(Bitfield mask)
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("Clear()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	if ((mask & SGL_COLOR_BUFFER_BIT) == SGL_COLOR_BUFFER_BIT)
+	if (mask & SGL_COLOR_BUFFER_BIT)
 	{
-	 	/*
-		UINT ClearColor =	(UByte)(255.0 * RC.Buffer.ClearColor[0]); ClearColor <<= 8;
+        UINT ClearColor =	(UByte)(255.0 * RC.Buffer.ClearColor[0]); ClearColor <<= 8;
 		ClearColor +=		(UByte)(255.0 * RC.Buffer.ClearColor[1]); ClearColor <<= 8;
 		ClearColor +=		(UByte)(255.0 * RC.Buffer.ClearColor[2]); ClearColor <<= 8;
 		ClearColor +=		(UByte)(255.0 * RC.Buffer.ClearColor[3]); 
 
-		for (Int i = 0; i < (Int)(RC.View.Size[0] * RC.View.Size[1]); i++)
-		{
-			Buffer.Back[i] = ClearColor;
-		}
-		*/
+        memset(Buffer.Back, ClearColor, RC.View.Size[0] * RC.View.Size[1] * 4);
 
-		UInt BufferSize = RC.View.Size[0] * RC.View.Size[1] / 16;
+        /*		
+        UInt BufferSize = RC.View.Size[0] * RC.View.Size[1] / 16;
 
-		__int64 ClearColor =	(UByte)(255.0 * RC.Buffer.ClearColor[0]); ClearColor <<= 8;
+        __int64 ClearColor =	(UByte)(255.0 * RC.Buffer.ClearColor[0]); ClearColor <<= 8;
 		ClearColor +=			(UByte)(255.0 * RC.Buffer.ClearColor[1]); ClearColor <<= 8;
 		ClearColor +=			(UByte)(255.0 * RC.Buffer.ClearColor[2]); ClearColor <<= 8;
 		ClearColor +=			(UByte)(255.0 * RC.Buffer.ClearColor[3]); 
@@ -716,10 +713,13 @@ SHADOWGL_API void ShadowGL::Clear(Bitfield mask)
 
 			emms
 		}
+        */
 	}
 
-	if ((mask & SGL_DEPTH_BUFFER_BIT) == SGL_DEPTH_BUFFER_BIT)
+	if (mask & SGL_DEPTH_BUFFER_BIT)
 	{
+        //memset(Buffer.Depth, *(UInt*)((void*)&RC.Buffer.ClearDepth), RC.View.Size[0] * RC.View.Size[1] * 4);
+
 		/*
 		for (Int i = 0; i < (Int)(RC.View.Size[0] * RC.View.Size[1]); i++)
 		{
@@ -727,7 +727,7 @@ SHADOWGL_API void ShadowGL::Clear(Bitfield mask)
 		}
 		*/
 
-		UInt BufferSize = RC.View.Size[0] * RC.View.Size[1] / 16;
+        UInt BufferSize = RC.View.Size[0] * RC.View.Size[1] / 16;
 		UInt ClearDepth = *(UInt*)((void*)&RC.Buffer.ClearDepth);
 
 		_asm

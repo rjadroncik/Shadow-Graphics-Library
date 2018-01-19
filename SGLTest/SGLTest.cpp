@@ -291,7 +291,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     MyRegisterClass(hInstance);
 
-    hWindow = CreateWindowEx(NULL, TEXT("ShadowGLTestSession"), TEXT("ShadowGL Test Session"), WS_OVERLAPPEDWINDOW | WS_SYSMENU, 100, 100, 640, 500, NULL, NULL, hInstance, NULL);
+    hWindow = CreateWindowEx(0, TEXT("ShadowGLTestSession"), TEXT("ShadowGL Test Session"), WS_OVERLAPPEDWINDOW | WS_SYSMENU, 100, 100, 640, 500, NULL, NULL, hInstance, NULL);
     if (!hWindow) { return FALSE; }
         
     TimerInitialize();
@@ -385,7 +385,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     GenTextures(16, &TexName[0]);
 
-    CImage* pPicture = CImage::Load(TEXT("Data\\AMD 64.jpg"), NULL);
+    CImage* pPicture = CImage::Load(TEXT("Data\\AMD 64.jpg"), 0);
     if (pPicture)
     {
         switch (pPicture->Channels())
@@ -406,7 +406,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
         delete pPicture;
     }
 
-    pPicture = CImage::Load(TEXT("Data\\NVidia.jpg"), NULL);
+    pPicture = CImage::Load(TEXT("Data\\NVidia.jpg"), 0);
     if (pPicture)
     {
         switch (pPicture->Channels())
@@ -546,6 +546,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 Minimized = FALSE;
             }
+
+            return DefWindowProc(hWnd, message, wParam, lParam);
         }
     case WM_PAINT:
         {

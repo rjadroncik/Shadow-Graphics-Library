@@ -20,8 +20,8 @@ namespace ShadowGLPrivate
 
 	const	UShort	MAX_TEXTURE_SIZE			= 512;
 
-	const	UShort	MAX_BUFFER_WIDTH			= 1024;
-	const	UShort	MAX_BUFFER_HEIGHT			= 1024;
+	const	UShort	MAX_BUFFER_WIDTH			= 2048;
+	const	UShort	MAX_BUFFER_HEIGHT			= 2048;
 
 	typedef struct SVertex
 	{
