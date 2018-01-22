@@ -9,40 +9,6 @@ using namespace ShadowGLPrivate;
 
 namespace ShadowGLPrivate
 {
-	//Current Temporary State
-	RECT Rect01;
-	RECT Rect02;
-
-	POINT Point01;
-	POINT Point02;
-
-	Char4 Char401;
-	Char4 Char402;
-
-	Float2 Float201;
-	Float2 Float202;
-
-	Float3 Float301;
-	Float3 Float302;
-	Float3 Float303;
-	Float3 Float304;
-	Float3 Float305;
-	Float3 Float306;
-	Float3 Float307;
-
-	Float4 Float401;
-	Float4 Float402;
-
-	Matrix3 Matrix301;
-	Matrix3 Matrix302;
-	Matrix3 Matrix303;
-	Matrix3 Matrix304;
-
-	Matrix4 Matrix401;
-	Matrix4 Matrix402;
-	Matrix4 Matrix403;
-	Matrix4 Matrix404;
-
 	SRenderingContext StateStack[8];
 	UINT StateSaved[8];
 	UINT StateStackDepth = 0;
@@ -186,15 +152,17 @@ SHADOWGL_API void ShadowGL::Lightfv(Enum light, Enum pname, const Float *params)
 
 	if (pname == SGL_POSITION)
 	{ 
-		SetVector4(Float401, params[0], params[1], params[2], params[3]);
-		MultiplyMatrix4Vector4(RC.Light[light].EyePosition, RC.Matrix.ModelView[RC.Matrix.MVCurrent], Float401);
+        Float4 position;
+		SetVector4(position, params[0], params[1], params[2], params[3]);
+		MultiplyMatrix4Vector4(RC.Light[light].EyePosition, RC.Matrix.ModelView[RC.Matrix.MVCurrent], position);
 		return; 
 	}
 
 	if (pname == SGL_SPOT_DIRECTION)
 	{ 
-		SetVector3(Float301, params[0], params[1], params[2]);
-		MultiplyMatrix4Vector3(RC.Light[light].EyeDirection, RC.Matrix.ModelView[RC.Matrix.MVCurrent], Float301);
+        Float3 direction;
+		SetVector3(direction, params[0], params[1], params[2]);
+		MultiplyMatrix4Vector3(RC.Light[light].EyeDirection, RC.Matrix.ModelView[RC.Matrix.MVCurrent], direction);
 
 		NormalizeVector3(RC.Light[light].EyeDirection, RC.Light[light].EyeDirection);
 		return; 

@@ -316,18 +316,19 @@ SHADOWGL_API void ShadowGL::Perspective(Double fov, Double aspect, Double clipNe
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("Perspective()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	ZeroMatrix4(Matrix401);
+    Matrix4 perspective;
+	ZeroMatrix4(perspective);
 
 	Double l_dTemp = 1.0 / tan(SCFDegToRad * fov / 2);
 
-	Matrix401[0][0] = l_dTemp / aspect;
+	perspective[0][0] = l_dTemp / aspect;
 
-	Matrix401[1][1] = l_dTemp;
+	perspective[1][1] = l_dTemp;
 
-	Matrix401[2][2] = (clipFar + clipNear) / (clipNear - clipFar);
-	Matrix401[2][3] = - 1;
+	perspective[2][2] = (clipFar + clipNear) / (clipNear - clipFar);
+	perspective[2][3] = - 1;
 
-	Matrix401[3][2] = (2 * clipFar * clipNear) / (clipNear - clipFar);
+	perspective[3][2] = (2 * clipFar * clipNear) / (clipNear - clipFar);
 
 //Near Clip Plane
 	SetVector4(RC.View.ClipPlane[0], 0, 0, -1, (Float)-clipNear);
@@ -336,47 +337,51 @@ SHADOWGL_API void ShadowGL::Perspective(Double fov, Double aspect, Double clipNe
 	SetVector4(RC.View.ClipPlane[1], 0, 0, 1, (Float)clipFar);
 
 //Top Clip Plane
-	SetVector3(Float301, 0, -1, 0);
-	RotateVector3(Float301, Float301, (float)fov * 0.5f, 0, 0);
-	SetVector4(RC.View.ClipPlane[2], Float301[0], Float301[1], Float301[2], 0);
+    Float3 tmp;
+	SetVector3(tmp, 0, -1, 0);
+	RotateVector3(tmp, tmp, (float)fov * 0.5f, 0, 0);
+	SetVector4(RC.View.ClipPlane[2], tmp[0], tmp[1], tmp[2], 0);
 
 //Bottom Clip Plane
-	SetVector3(Float301, 0, 1, 0);
-	RotateVector3(Float301, Float301, -(float)fov * 0.5f, 0, 0);
-	SetVector4(RC.View.ClipPlane[3], Float301[0], Float301[1], Float301[2], 0);
+	SetVector3(tmp, 0, 1, 0);
+	RotateVector3(tmp, tmp, -(float)fov * 0.5f, 0, 0);
+	SetVector4(RC.View.ClipPlane[3], tmp[0], tmp[1], tmp[2], 0);
 
 	float FovX = (Float)atan(tan(SCFDegToRad * fov / 2) * aspect) * SCFRadToDeg;
 
 //Right Clip Plane
-	SetVector3(Float301, -1, 0, 0);
-	RotateVector3(Float301, Float301, 0, -FovX, 0);
-	SetVector4(RC.View.ClipPlane[4], Float301[0], Float301[1], Float301[2], 0);
+	SetVector3(tmp, -1, 0, 0);
+	RotateVector3(tmp, tmp, 0, -FovX, 0);
+	SetVector4(RC.View.ClipPlane[4], tmp[0], tmp[1], tmp[2], 0);
 
 //Left Clip Plane
-	SetVector3(Float301, 1, 0, 0);
-	RotateVector3(Float301, Float301, 0, FovX, 0);
-	SetVector4(RC.View.ClipPlane[5], Float301[0], Float301[1], Float301[2], 0);
+	SetVector3(tmp, 1, 0, 0);
+	RotateVector3(tmp, tmp, 0, FovX, 0);
+	SetVector4(RC.View.ClipPlane[5], tmp[0], tmp[1], tmp[2], 0);
 
 	switch (RC.Matrix.Mode)
 	{
 	case SGL_MODELVIEW:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
-			MultiplyMatrices4(RC.Matrix.ModelView[RC.Matrix.MVCurrent], Matrix402, Matrix401);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
+			MultiplyMatrices4(RC.Matrix.ModelView[RC.Matrix.MVCurrent], tmp, perspective);
 			return;
 		}
 
 	case SGL_PROJECTION:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Projection[RC.Matrix.PCurrent]);
-			MultiplyMatrices4(RC.Matrix.Projection[RC.Matrix.PCurrent], Matrix402, Matrix401);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Projection[RC.Matrix.PCurrent]);
+			MultiplyMatrices4(RC.Matrix.Projection[RC.Matrix.PCurrent], tmp, perspective);
 			return;
 		}
 
 	case SGL_TEXTURE:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Texture[RC.Matrix.TCurrent]);
-			MultiplyMatrices4(RC.Matrix.Texture[RC.Matrix.TCurrent], Matrix402, Matrix401);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Texture[RC.Matrix.TCurrent]);
+			MultiplyMatrices4(RC.Matrix.Texture[RC.Matrix.TCurrent], tmp, perspective);
 			return;
 		}
 	}
@@ -387,39 +392,43 @@ SHADOWGL_API void ShadowGL::Frustum(Double left, Double right, Double bottom, Do
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("Frustum()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	ZeroMatrix4(Matrix401);
+    Matrix4 frustum;
+	ZeroMatrix4(frustum);
 
-	Matrix401[0][0] = 2 * clipNear / (right - left);
+	frustum[0][0] = 2 * clipNear / (right - left);
 
-	Matrix401[1][1] = 2 * clipNear / (top - bottom);
+	frustum[1][1] = 2 * clipNear / (top - bottom);
 
-	Matrix401[2][0] = (right + left) / (right - left);
-	Matrix401[2][1] = (top + bottom) / (top - bottom);
-	Matrix401[2][2] = - (clipFar + clipNear) / (clipFar - clipNear);
-	Matrix401[2][3] = - 1;
+	frustum[2][0] = (right + left) / (right - left);
+	frustum[2][1] = (top + bottom) / (top - bottom);
+	frustum[2][2] = - (clipFar + clipNear) / (clipFar - clipNear);
+	frustum[2][3] = - 1;
 
-	Matrix401[3][2] = - (2 * clipFar * clipNear) / (clipFar - clipNear);
+	frustum[3][2] = - (2 * clipFar * clipNear) / (clipFar - clipNear);
 
 	switch (RC.Matrix.Mode)
 	{
 	case SGL_MODELVIEW:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
-			MultiplyMatrices4(RC.Matrix.ModelView[RC.Matrix.MVCurrent], Matrix402, Matrix401);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
+			MultiplyMatrices4(RC.Matrix.ModelView[RC.Matrix.MVCurrent], tmp, frustum);
 			return;
 		}
 
 	case SGL_PROJECTION:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Projection[RC.Matrix.PCurrent]);
-			MultiplyMatrices4(RC.Matrix.Projection[RC.Matrix.PCurrent], Matrix402, Matrix401);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Projection[RC.Matrix.PCurrent]);
+			MultiplyMatrices4(RC.Matrix.Projection[RC.Matrix.PCurrent], tmp, frustum);
 			return;
 		}
 
 	case SGL_TEXTURE:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Texture[RC.Matrix.TCurrent]);
-			MultiplyMatrices4(RC.Matrix.Texture[RC.Matrix.TCurrent], Matrix402, Matrix401);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Texture[RC.Matrix.TCurrent]);
+			MultiplyMatrices4(RC.Matrix.Texture[RC.Matrix.TCurrent], tmp, frustum);
 			return;
 		}
 	}
@@ -511,35 +520,43 @@ SHADOWGL_API void ShadowGL::Rotatef(Float angle, Float x, Float y, Float z)
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("Rotatef()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	SetVector3(Float301, x, y, z);
-	NormalizeVector3(Float301, Float301);
+    Float3 axis;
+	SetVector3(axis, x, y, z);
+	NormalizeVector3(axis, axis);
 
-	AxisRotationMatrixN(Matrix301, Float301, angle);
+    Matrix3 rotation;
+	AxisRotationMatrixN(rotation, axis, angle);
 
 	//Post Multiply Current Matrix
 	switch (RC.Matrix.Mode)
 	{
 	case SGL_MODELVIEW: 
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
-			MultiplyMatrix4Matrix3(RC.Matrix.ModelView[RC.Matrix.MVCurrent], Matrix402, Matrix301);
+            Matrix4 tmp;
+
+            CopyMatrix4(tmp, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
+			MultiplyMatrix4Matrix3(RC.Matrix.ModelView[RC.Matrix.MVCurrent], tmp, rotation);
 			
-			TransposeMatrix3(Matrix302, Matrix301);
-			CopyMatrix4(Matrix402, RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]);
-			MultiplyMatrix3Matrix4(RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent], Matrix302, Matrix402);
+            Matrix3 inverseRotation;
+			TransposeMatrix3(inverseRotation, rotation);
+
+			CopyMatrix4(tmp, RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]);
+			MultiplyMatrix3Matrix4(RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent], inverseRotation, tmp);
 			return;
 		}
 	case SGL_PROJECTION:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Projection[RC.Matrix.PCurrent]);
-			MultiplyMatrix4Matrix3(RC.Matrix.Projection[RC.Matrix.PCurrent], Matrix402, Matrix301);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Projection[RC.Matrix.PCurrent]);
+			MultiplyMatrix4Matrix3(RC.Matrix.Projection[RC.Matrix.PCurrent], tmp, rotation);
 			return;
 		}
 
 	case SGL_TEXTURE:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Texture[RC.Matrix.TCurrent]);
-			MultiplyMatrix4Matrix3(RC.Matrix.Texture[RC.Matrix.TCurrent], Matrix402, Matrix301);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Texture[RC.Matrix.TCurrent]);
+			MultiplyMatrix4Matrix3(RC.Matrix.Texture[RC.Matrix.TCurrent], tmp, rotation);
 			return;
 		}	
 	}
@@ -550,41 +567,46 @@ SHADOWGL_API void ShadowGL::Translatef(Float x, Float y, Float z)
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("Translatef()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	MakeIndentityMatrix4(Matrix401);
+    Matrix4 translate;
+	MakeIndentityMatrix4(translate);
 
-	Matrix401[3][0] = x;
-	Matrix401[3][1] = y;
-	Matrix401[3][2] = z; 
+	translate[3][0] = x;
+	translate[3][1] = y;
+	translate[3][2] = z; 
 
 	//Post Multiply Current Matrix
 	switch (RC.Matrix.Mode)
 	{
 	case SGL_MODELVIEW:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
-			MultiplyMatrices4(RC.Matrix.ModelView[RC.Matrix.MVCurrent], Matrix402, Matrix401);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
+			MultiplyMatrices4(RC.Matrix.ModelView[RC.Matrix.MVCurrent], tmp, translate);
 		
-			CopyMatrix4(Matrix403, Matrix401);
-			Matrix403[3][0] = - Matrix403[3][0];
-			Matrix403[3][1] = - Matrix403[3][1];
-			Matrix403[3][2] = - Matrix403[3][2];
+            Matrix4 inverseTranslate;
+			CopyMatrix4(inverseTranslate, translate);
+			inverseTranslate[3][0] = - inverseTranslate[3][0];
+			inverseTranslate[3][1] = - inverseTranslate[3][1];
+			inverseTranslate[3][2] = - inverseTranslate[3][2];
 
-			CopyMatrix4(Matrix402, RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]);
-			MultiplyMatrices4(RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent], Matrix403, Matrix402);
+			CopyMatrix4(tmp, RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]);
+			MultiplyMatrices4(RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent], inverseTranslate, tmp);
 			return;
 		}
 
 	case SGL_PROJECTION:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Projection[RC.Matrix.PCurrent]);
-			MultiplyMatrices4(RC.Matrix.Projection[RC.Matrix.PCurrent], Matrix402, Matrix401);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Projection[RC.Matrix.PCurrent]);
+			MultiplyMatrices4(RC.Matrix.Projection[RC.Matrix.PCurrent], tmp, translate);
 			return;
 		}
 
 	case SGL_TEXTURE:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Texture[RC.Matrix.TCurrent]);
-			MultiplyMatrices4(RC.Matrix.Texture[RC.Matrix.TCurrent], Matrix402, Matrix401);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Texture[RC.Matrix.TCurrent]);
+			MultiplyMatrices4(RC.Matrix.Texture[RC.Matrix.TCurrent], tmp, translate);
 			return;
 		}
 	}
@@ -595,41 +617,46 @@ SHADOWGL_API void ShadowGL::Scalef(Float x, Float y, Float z)
 	if (!RC_OK) { MessageBox(NULL, TEXT("No Current Rendering Context!"), TEXT("Scalef()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	MakeIndentityMatrix3(Matrix301);
+    Matrix3 scale;
+	MakeIndentityMatrix3(scale);
 
-	Matrix301[0][0] = x;
-	Matrix301[1][1] = y;
-	Matrix301[2][2] = z; 
+	scale[0][0] = x;
+	scale[1][1] = y;
+	scale[2][2] = z; 
 
 	//Post Multiply Current Matrix
 	switch (RC.Matrix.Mode)
 	{
 	case SGL_MODELVIEW:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
-			MultiplyMatrix4Matrix3(RC.Matrix.ModelView[RC.Matrix.MVCurrent], Matrix402, Matrix301);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
+			MultiplyMatrix4Matrix3(RC.Matrix.ModelView[RC.Matrix.MVCurrent], tmp, scale);
 			
-			CopyMatrix3(Matrix302, Matrix301);
-			Matrix302[0][0] = 1 / Matrix302[0][0];
-			Matrix302[1][1] = 1 / Matrix302[1][1];
-			Matrix302[2][2] = 1 / Matrix302[2][2];
+            Matrix3 inverseScale;
+			CopyMatrix3(inverseScale, scale);
+			inverseScale[0][0] = 1 / inverseScale[0][0];
+			inverseScale[1][1] = 1 / inverseScale[1][1];
+			inverseScale[2][2] = 1 / inverseScale[2][2];
 
-			CopyMatrix4(Matrix402, RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]);
-			MultiplyMatrix3Matrix4(RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent], Matrix302, Matrix402);
+			CopyMatrix4(tmp, RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]);
+			MultiplyMatrix3Matrix4(RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent], inverseScale, tmp);
 			return;
 		}
 
 	case SGL_PROJECTION:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Projection[RC.Matrix.PCurrent]);
-			MultiplyMatrix4Matrix3(RC.Matrix.Projection[RC.Matrix.PCurrent], Matrix402, Matrix301);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Projection[RC.Matrix.PCurrent]);
+			MultiplyMatrix4Matrix3(RC.Matrix.Projection[RC.Matrix.PCurrent], tmp, scale);
 			return;
 		}
 
 	case SGL_TEXTURE:
 		{
-			CopyMatrix4(Matrix402, RC.Matrix.Texture[RC.Matrix.TCurrent]);
-			MultiplyMatrix4Matrix3(RC.Matrix.Texture[RC.Matrix.TCurrent], Matrix402, Matrix301);
+            Matrix4 tmp;
+			CopyMatrix4(tmp, RC.Matrix.Texture[RC.Matrix.TCurrent]);
+			MultiplyMatrix4Matrix3(RC.Matrix.Texture[RC.Matrix.TCurrent], tmp, scale);
 			return;
 		}
 	}

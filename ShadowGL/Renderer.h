@@ -29,5 +29,5 @@ namespace ShadowGLPrivate
 	void RasterizePrimitive(tVertex *vertex, UByte count);
 
 	void RasterizeTriangle(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3);
-	void ScanLine(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3);
+	void ScanLine(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3, SRendererState::SLineState &line, SRendererState::SCurPixelState &pixel);
 }

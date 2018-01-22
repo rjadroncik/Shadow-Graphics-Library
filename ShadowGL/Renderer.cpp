@@ -2,6 +2,7 @@
 
 #include "Renderer.h"
 #include "ShadowGL.h"
+#include <future>
 
 using namespace SCFMathematics;
 using namespace ShadowGLPrivate;
@@ -18,13 +19,7 @@ namespace ShadowGLPrivate
 	Float Coefficient_12 = 0;
 	Float Coefficient_23 = 0;
 
-	Int X_LeftClamped  = 0;
-	Int X_RightClamped = 0;
-
-	Float3 B_LeftCoord;
-	Float3 B_RightCoord;
-
-	Float T_Area = 0;
+	Float TriangleArea = 0;
 
 	UByte *pTexture = NULL;
 
@@ -184,32 +179,34 @@ namespace ShadowGLPrivate
 {
 	bool CullPrimitive()
 	{
-	    //Prepare Normal Transformation Matrix
-		TruncateTopLeftToMatrix3(Matrix301, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
+		//Prepare Normal Transformation Matrix
+		//TODO: WTF?? TruncateTopLeftToMatrix3(Matrix301, RC.Matrix.ModelView[RC.Matrix.MVCurrent]);
 
-	    //Vertex Processing
+		//Vertex Processing
 		for (UByte i = 0; i < RC.Primitive.MaxVertices; i++)
 		{
 		//Create tVertex Eye Coordinates
 			MultiplyMatrix4Vector4(RC.Primitive.Vertex[i].EyeCoord, RC.Matrix.ModelView[RC.Matrix.MVCurrent], RC.Primitive.Vertex[i].ObjCoord);
 		}
 
-	    //Face Culling	 
+		//Face Culling	 
 		if (RC.Enable.FaceCulling)
 		{
-		    //Find Normal
-			if (RC.FrontFace == SGL_CCW)	{ MakeNormal(Float301, (Float3&)RC.Primitive.Vertex[0].EyeCoord, (Float3&)RC.Primitive.Vertex[1].EyeCoord, (Float3&)RC.Primitive.Vertex[2].EyeCoord); }
-			else							{ MakeNormal(Float301, (Float3&)RC.Primitive.Vertex[2].EyeCoord, (Float3&)RC.Primitive.Vertex[1].EyeCoord, (Float3&)RC.Primitive.Vertex[0].EyeCoord); }
+			//Find Normal
+            Float3 normal;
+			if (RC.FrontFace == SGL_CCW)	{ MakeNormal(normal, (Float3&)RC.Primitive.Vertex[0].EyeCoord, (Float3&)RC.Primitive.Vertex[1].EyeCoord, (Float3&)RC.Primitive.Vertex[2].EyeCoord); }
+			else							{ MakeNormal(normal, (Float3&)RC.Primitive.Vertex[2].EyeCoord, (Float3&)RC.Primitive.Vertex[1].EyeCoord, (Float3&)RC.Primitive.Vertex[0].EyeCoord); }
 
-		    //Find Triangle Center to Eye Direction Vector (Assuming Eye at (0, 0, 0)) 
-			Float302[0] = (RC.Primitive.Vertex[0].EyeCoord[0] + RC.Primitive.Vertex[1].EyeCoord[0] + RC.Primitive.Vertex[2].EyeCoord[0]) / 3.0f;
-			Float302[1] = (RC.Primitive.Vertex[0].EyeCoord[1] + RC.Primitive.Vertex[1].EyeCoord[1] + RC.Primitive.Vertex[2].EyeCoord[1]) / 3.0f;
-			Float302[2] = (RC.Primitive.Vertex[0].EyeCoord[2] + RC.Primitive.Vertex[1].EyeCoord[2] + RC.Primitive.Vertex[2].EyeCoord[2]) / 3.0f;
-			NormalizeVector3(Float302, Float302);
+			//Find Triangle Center to Eye Direction Vector (Assuming Eye at (0, 0, 0)) 
+            Float3 direction;
+			direction[0] = (RC.Primitive.Vertex[0].EyeCoord[0] + RC.Primitive.Vertex[1].EyeCoord[0] + RC.Primitive.Vertex[2].EyeCoord[0]) / 3.0f;
+			direction[1] = (RC.Primitive.Vertex[0].EyeCoord[1] + RC.Primitive.Vertex[1].EyeCoord[1] + RC.Primitive.Vertex[2].EyeCoord[1]) / 3.0f;
+			direction[2] = (RC.Primitive.Vertex[0].EyeCoord[2] + RC.Primitive.Vertex[1].EyeCoord[2] + RC.Primitive.Vertex[2].EyeCoord[2]) / 3.0f;
+			NormalizeVector3(direction, direction);
 
-			float AngleCose = MultiplyVectors3(Float301, Float302);
+			float AngleCose = MultiplyVectors3(normal, direction);
 
-		    //Determine Whether to Continue or Not
+			//Determine Whether to Continue or Not
 			if (RC.CullStyle == SGL_BACK) { if (AngleCose > 0) { return TRUE; } }
 			else { if (AngleCose < 0) { return TRUE; } }
 		}
@@ -366,15 +363,16 @@ namespace ShadowGLPrivate
 
 	void PrepareLighting(tVertex *vertex, UByte count)
 	{
-		TruncateTopLeftToMatrix3(Matrix301, RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]); 
+        Matrix3 inverseModelView;
+		TruncateTopLeftToMatrix3(inverseModelView, RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]); 
 
-		MultiplyMatrices4(Matrix401, RC.Matrix.ModelView[RC.Matrix.MVCurrent], RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]);
+		//TODO: WTF?? MultiplyMatrices4(Matrix401, RC.Matrix.ModelView[RC.Matrix.MVCurrent], RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]);
 
 		//Vertex processing continued...
 		for (UByte i = 0; i < count; i++)
 		{
 			//Process vertex normals (to eye coordinates) 
-			MultiplyVectorT3Matrix3(vertex[i].EyeNormal, vertex[i].ObjNormal, Matrix301);
+			MultiplyVectorT3Matrix3(vertex[i].EyeNormal, vertex[i].ObjNormal, inverseModelView);
 
 			//Defaulting to SGL_NORMALIZE enabled
 			NormalizeVector3(vertex[i].EyeNormal, vertex[i].EyeNormal);
@@ -405,8 +403,9 @@ namespace ShadowGLPrivate
 					ZeroVector3(CurLight);
 
 					//Light to vertex distance
-					MakeVector3(Float301, (Float3&)RC.Light[j].EyePosition, (Float3&)vertex[i].EyeCoord);
-					float LightToVertexDistance = MeasureVector3(Float301);
+                    Float3 lightToVertex;
+					MakeVector3(lightToVertex, (Float3&)RC.Light[j].EyePosition, (Float3&)vertex[i].EyeCoord);
+					float LightToVertexDistance = MeasureVector3(lightToVertex);
 
 					//Attenuation factor
 					if (vertex[i].EyeCoord[3] != 0)
@@ -423,8 +422,8 @@ namespace ShadowGLPrivate
 					else
 					{
 						//Max of dot product of light to vertex vector & light direction
-						NormalizeVector3(Float301, Float301);
-						float SpotAngleCose = MultiplyVectors3(Float301, RC.Light[j].EyeDirection);
+						NormalizeVector3(lightToVertex, lightToVertex);
+						float SpotAngleCose = MultiplyVectors3(lightToVertex, RC.Light[j].EyeDirection);
 
 						if (SpotAngleCose < 0) { SpotAngleCose = 0; }
 						
@@ -441,38 +440,41 @@ namespace ShadowGLPrivate
 					MADVectors3CW(CurLight, (Float3&)RC.Material.Ambient, (Float3&)RC.Light[j].Ambient);
 					
 					//Normalized vertex to light vector	
-					MakeVector3(Float301, (Float3&)vertex[i].EyeCoord, (Float3&)RC.Light[j].EyePosition);
-					NormalizeVector3(Float301, Float301);
+                    Float3 vertexToLightDirection;
+					MakeVector3(vertexToLightDirection, (Float3&)vertex[i].EyeCoord, (Float3&)RC.Light[j].EyePosition);
+					NormalizeVector3(vertexToLightDirection, vertexToLightDirection);
 
 					//Max of dot product of: Vertex to light vector & normal 
-					float DiffuseFactor = __max(0, MultiplyVectors3(vertex[i].EyeNormal, Float301));
+					float DiffuseFactor = __max(0, MultiplyVectors3(vertex[i].EyeNormal, vertexToLightDirection));
 			
-					//Compute & add diffuse contribution
-					ScaleVector3(Float302, (Float3&)RC.Material.Diffuse, DiffuseFactor);
-					MADVectors3CW(CurLight, Float302, (Float3&)RC.Light[j].Diffuse);
-					
 					//Specular contribution
 					if (DiffuseFactor != 0)
-					{
+                    {
+                        //Compute & add diffuse contribution
+                        Float3 diffuse;
+					    ScaleVector3(diffuse, (Float3&)RC.Material.Diffuse, DiffuseFactor);
+					    MADVectors3CW(CurLight, diffuse, (Float3&)RC.Light[j].Diffuse);
+
 						if (RC.Enable.LocalViewer)
 						{
-							NormalizeVector3(Float302, (Float3&)vertex[i].EyeCoord);
-							SubtractVectors3(Float301, Float301, Float302);
+							NormalizeVector3(diffuse, (Float3&)vertex[i].EyeCoord);
+							SubtractVectors3(vertexToLightDirection, vertexToLightDirection, diffuse);
 						}
-						else { Float301[2] += 1; }
+						else { vertexToLightDirection[2] += 1; }
 
-						NormalizeVector3(Float301, Float301);
+						NormalizeVector3(vertexToLightDirection, vertexToLightDirection);
 
 						//Max of dot product of: normal & specular half vector
-						float SpecularFactor = __max(0, MultiplyVectors3(vertex[i].EyeNormal, Float301));
+						float SpecularFactor = __max(0, MultiplyVectors3(vertex[i].EyeNormal, vertexToLightDirection));
 
 						//Raise specular factor to the power of material shininess
 						if (RC.Material.Shininess == 0) { SpecularFactor = 1; }
 						else                            { SpecularFactor = (Float)pow(SpecularFactor, RC.Material.Shininess); }
 						
 						//Add Specular Contribution
-						ScaleVector3(Float302, (Float3&)RC.Material.Specular, SpecularFactor);
-						MADVectors3CW(CurLight, Float302, (Float3&)RC.Light[j].Specular);
+                        Float3 scalar;
+						ScaleVector3(scalar, (Float3&)RC.Material.Specular, SpecularFactor);
+						MADVectors3CW(CurLight, scalar, (Float3&)RC.Light[j].Specular);
 					}
 
 					ScaleVector3(CurLight, CurLight, Attenuation);
@@ -586,15 +588,18 @@ namespace ShadowGLPrivate
 				//Init Values For Flat Shading
 				if (!RC.Enable.SmoothShading)
 				{
-					CopyVector4(RS.Line.Current.Color, vertex[0].LitColor); 
+					for (UInt thread = 0; thread < MAX_THREADS; thread++)
+					{
+						CopyVector4(RS.Line[thread].Current.Color, vertex[0].LitColor); 
 
-					RS.Pixel.Write.Color = (UByte)(255 * RS.Line.Current.Color[3]);
-					RS.Pixel.Write.Color <<= 8;
-					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[2]);
-					RS.Pixel.Write.Color <<= 8;
-					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[1]);
-					RS.Pixel.Write.Color <<= 8;
-					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[0]);
+						RS.Pixel[thread].Write.Color = (UByte)(255 * vertex[0].LitColor[3]);
+						RS.Pixel[thread].Write.Color <<= 8;
+						RS.Pixel[thread].Write.Color += (UByte)(255 * vertex[0].LitColor[2]);
+						RS.Pixel[thread].Write.Color <<= 8;
+						RS.Pixel[thread].Write.Color += (UByte)(255 * vertex[0].LitColor[1]);
+						RS.Pixel[thread].Write.Color <<= 8;
+						RS.Pixel[thread].Write.Color += (UByte)(255 * vertex[0].LitColor[0]);
+					}
 				}
 				
 				//Sort Vertices
@@ -611,6 +616,67 @@ namespace ShadowGLPrivate
 		}
 	}
 
+	void RasterizeTopPartOfTriangleWithMiddleVertexRight(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+	{
+		for (RS.Line[0].Index = RS.Vertex[0].Y; RS.Line[0].Index <= RS.Vertex[1].Y; RS.Line[0].Index++)
+		{
+			if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
+			{
+				RS.Line[0].Left.X  = - Coefficient_13 * ((Float)RS.Line[0].Index + 0.5f) - Offset_13;
+				RS.Line[0].Right.X = - Coefficient_12 * ((Float)RS.Line[0].Index + 0.5f) - Offset_12;
+			}
+			else { RS.Line[0].Left.X = vertex1->ViewCoord[0]; RS.Line[0].Right.X = vertex2->ViewCoord[0]; }
+
+			ScanLine(vertex1, vertex2, vertex3, RS.Line[0], RS.Pixel[0]);
+		}
+	}
+
+	void RasterizeBottomPartOfTriangleWithMiddleVertexRight(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+	{    
+		for (RS.Line[1].Index = RS.Vertex[1].Y + 1; RS.Line[1].Index <= RS.Vertex[2].Y; RS.Line[1].Index++)
+		{
+			//Compute left & right coordinate values
+			if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
+			{
+				RS.Line[1].Left.X  = - Coefficient_13 * ((Float)RS.Line[1].Index + 0.5f) - Offset_13;
+				RS.Line[1].Right.X = - Coefficient_23 * ((Float)RS.Line[1].Index + 0.5f) - Offset_23;
+			}
+			else {	RS.Line[1].Left.X = vertex2->ViewCoord[0]; RS.Line[1].Right.X = vertex3->ViewCoord[0]; }
+
+			ScanLine(vertex1, vertex2, vertex3, RS.Line[1], RS.Pixel[1]);
+		}
+	}
+
+    void RasterizeTopPartOfTriangleWithMiddleVertexLeft(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+	{
+		for (RS.Line[0].Index = RS.Vertex[0].Y; RS.Line[0].Index <= RS.Vertex[1].Y; RS.Line[0].Index++)
+		{
+			if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
+			{
+				RS.Line[0].Right.X = - Coefficient_13 * ((Float)RS.Line[0].Index + 0.5f) - Offset_13;
+				RS.Line[0].Left.X  = - Coefficient_12 * ((Float)RS.Line[0].Index + 0.5f) - Offset_12;
+			}
+			else { RS.Line[0].Right.X = vertex1->ViewCoord[0]; RS.Line[0].Left.X = vertex2->ViewCoord[0]; }
+
+			ScanLine(vertex1, vertex2, vertex3, RS.Line[0], RS.Pixel[0]);
+		}
+    }
+
+    void RasterizeBottomPartOfTriangleWithMiddleVertexLeft(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+    {
+        for (RS.Line[1].Index = RS.Vertex[1].Y + 1; RS.Line[1].Index <= RS.Vertex[2].Y; RS.Line[1].Index++)
+		{
+			if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
+			{
+				RS.Line[1].Right.X = - Coefficient_13 * ((Float)RS.Line[1].Index + 0.5f) - Offset_13;
+				RS.Line[1].Left.X  = - Coefficient_23 * ((Float)RS.Line[1].Index + 0.5f) - Offset_23;
+			}
+			else { RS.Line[1].Right.X = vertex2->ViewCoord[0]; RS.Line[1].Left.X = vertex3->ViewCoord[0]; }
+
+			ScanLine(vertex1, vertex2, vertex3, RS.Line[1], RS.Pixel[1]);
+		}
+    }
+
 	void RasterizeTriangle(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
 	{
 		//Texturing variables
@@ -619,16 +685,16 @@ namespace ShadowGLPrivate
 		RS.Vertex[2].Clip.W = vertex3->ClipCoord[3];
 
 		//Prepare iterator[1,3] 
-		MakeVector3(Float304, (Float3&)vertex1->ViewCoord, (Float3&)vertex3->ViewCoord);
-		DivideVector3(Float304, Float304, Float304[1]);
+		//MakeVector3(Float304, (Float3&)vertex1->ViewCoord, (Float3&)vertex3->ViewCoord);
+		//DivideVector3(Float304, Float304, Float304[1]);
 
-		//Prepare iterator[1,2] 
-		MakeVector3(Float305, (Float3&)vertex1->ViewCoord, (Float3&)vertex2->ViewCoord);
-		DivideVector3(Float305, Float305, Float305[1]);
+		////Prepare iterator[1,2] 
+		//MakeVector3(Float305, (Float3&)vertex1->ViewCoord, (Float3&)vertex2->ViewCoord);
+		//DivideVector3(Float305, Float305, Float305[1]);
 
-		//Prepare iterator[2,3] 
-		MakeVector3(Float306, (Float3&)vertex2->ViewCoord, (Float3&)vertex3->ViewCoord);
-		DivideVector3(Float306, Float306, Float306[1]);
+		////Prepare iterator[2,3] 
+		//MakeVector3(Float306, (Float3&)vertex2->ViewCoord, (Float3&)vertex3->ViewCoord);
+		//DivideVector3(Float306, Float306, Float306[1]);
 
 		//Prepare other values
 		CopyVector4(RS.Fog.Color, RC.Fog.Color);
@@ -641,7 +707,7 @@ namespace ShadowGLPrivate
 			RS.Texture.Components = Texture[RC.TexCurrent2D].Components;
 		}
 
-		T_Area = TriangleArea2x2((Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord);
+		TriangleArea = TriangleArea2x2((Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord);
 
 		//Compute coefficients
 		if ((vertex3->ViewCoord[1] - vertex1->ViewCoord[1]) != 0) { Coefficient_13 = (vertex1->ViewCoord[0] - vertex3->ViewCoord[0]) / (vertex3->ViewCoord[1] - vertex1->ViewCoord[1]); }
@@ -668,178 +734,144 @@ namespace ShadowGLPrivate
 		if (vertex3->ViewCoord[1] <= ((Int)vertex3->ViewCoord[1] + 0.5f)) { RS.Vertex[2].Y = (Int)vertex3->ViewCoord[1] - 1; }
 		else { RS.Vertex[2].Y = (Int)vertex3->ViewCoord[1]; }
 
-		//Scan one line at a time
 		if (vertex2->ViewCoord[0] >= (- Coefficient_13 * vertex2->ViewCoord[1] - Offset_13)) 
 		{
-			//Vertex2 is on the right
-			for (RS.Line.Index = RS.Vertex[0].Y; RS.Line.Index <= RS.Vertex[1].Y; RS.Line.Index++)
-			{
-				if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
-				{
-					RS.Line.Left.X  = - Coefficient_13 * ((Float)RS.Line.Index + 0.5f) - Offset_13;
-					RS.Line.Right.X = - Coefficient_12 * ((Float)RS.Line.Index + 0.5f) - Offset_12;
-				}
-				else { RS.Line.Left.X = vertex1->ViewCoord[0]; RS.Line.Right.X = vertex2->ViewCoord[0]; }
+			std::future<void> result1(std::async(std::launch::async, RasterizeTopPartOfTriangleWithMiddleVertexRight,    vertex1, vertex2, vertex3));
+			std::future<void> result2(std::async(std::launch::async, RasterizeBottomPartOfTriangleWithMiddleVertexRight, vertex1, vertex2, vertex3));
 
-				ScanLine(vertex1, vertex2, vertex3);
-			}
-
-			for (RS.Line.Index = RS.Vertex[1].Y + 1; RS.Line.Index <= RS.Vertex[2].Y; RS.Line.Index++)
-			{
-				//Compute left & right coordinate values
-				if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
-				{
-					RS.Line.Left.X  = - Coefficient_13 * ((Float)RS.Line.Index + 0.5f) - Offset_13;
-					RS.Line.Right.X = - Coefficient_23 * ((Float)RS.Line.Index + 0.5f) - Offset_23;
-				}
-				else {	RS.Line.Left.X = vertex2->ViewCoord[0]; RS.Line.Right.X = vertex3->ViewCoord[0]; }
-
-				ScanLine(vertex1, vertex2, vertex3);
-			}
+			result1.get();
+			result2.get();
 		}
 		else
 		{
-			//Vertex2 is on the left
-			for (RS.Line.Index = RS.Vertex[0].Y; RS.Line.Index <= RS.Vertex[1].Y; RS.Line.Index++)
-			{
-				if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
-				{
-					RS.Line.Right.X = - Coefficient_13 * ((Float)RS.Line.Index + 0.5f) - Offset_13;
-					RS.Line.Left.X  = - Coefficient_12 * ((Float)RS.Line.Index + 0.5f) - Offset_12;
-				}
-				else { RS.Line.Right.X = vertex1->ViewCoord[0]; RS.Line.Left.X = vertex2->ViewCoord[0]; }
+            std::future<void> result1(std::async(std::launch::async, RasterizeTopPartOfTriangleWithMiddleVertexLeft,    vertex1, vertex2, vertex3));
+			std::future<void> result2(std::async(std::launch::async, RasterizeBottomPartOfTriangleWithMiddleVertexLeft, vertex1, vertex2, vertex3));
 
-				ScanLine(vertex1, vertex2, vertex3);
-			}
-
-			for (RS.Line.Index = RS.Vertex[1].Y + 1; RS.Line.Index <= RS.Vertex[2].Y; RS.Line.Index++)
-			{
-				if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
-				{
-					RS.Line.Right.X = - Coefficient_13 * ((Float)RS.Line.Index + 0.5f) - Offset_13;
-					RS.Line.Left.X  = - Coefficient_23 * ((Float)RS.Line.Index + 0.5f) - Offset_23;
-				}
-				else { RS.Line.Right.X = vertex2->ViewCoord[0]; RS.Line.Left.X = vertex3->ViewCoord[0]; }
-
-				ScanLine(vertex1, vertex2, vertex3);
-			}
+			result1.get();
+			result2.get();		
 		}
 	}
 
-	void ScanLine(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+	void ScanLine(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3, SRendererState::SLineState &line, SRendererState::SCurPixelState &pixel)
 	{
+		Float3 B_LeftCoord;
+		Float3 B_RightCoord;
+
 		//Apply left-top rasterization rules to vertex values
-		X_LeftClamped  = (RS.Line.Left.X  > ((Int)RS.Line.Left.X  + 0.5f)) ? (Int)RS.Line.Left.X  + 1 : X_LeftClamped  = (Int)RS.Line.Left.X; 
-		X_RightClamped = (RS.Line.Right.X < ((Int)RS.Line.Right.X + 0.5f)) ? (Int)RS.Line.Right.X - 1 : X_RightClamped = (Int)RS.Line.Right.X;
+		Int X_LeftClamped  = (line.Left.X  > ((Int)line.Left.X  + 0.5f)) ? (Int)line.Left.X  + 1 : (Int)line.Left.X; 
+		Int X_RightClamped = (line.Right.X < ((Int)line.Right.X + 0.5f)) ? (Int)line.Right.X - 1 : (Int)line.Right.X;
+
+		Float2 Float201;
+		Float2 Float202;
 
 		//Compute barycentric coords
-		SetVector2(Float201, (Float)X_LeftClamped  + 0.5f, (Float)RS.Line.Index + 0.5f);
-		SetVector2(Float202, (Float)X_RightClamped + 0.5f, (Float)RS.Line.Index + 0.5f);
+		SetVector2(Float201, (Float)X_LeftClamped  + 0.5f, (Float)line.Index + 0.5f);
+		SetVector2(Float202, (Float)X_RightClamped + 0.5f, (Float)line.Index + 0.5f);
 
-		B_LeftCoord[0] = TriangleArea2x2(Float201, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / T_Area;
-		B_LeftCoord[1] = TriangleArea2x2(Float201, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / T_Area;
-		B_LeftCoord[2] = TriangleArea2x2(Float201, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / T_Area;
+		B_LeftCoord[0] = TriangleArea2x2(Float201, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / TriangleArea;
+		B_LeftCoord[1] = TriangleArea2x2(Float201, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / TriangleArea;
+		B_LeftCoord[2] = TriangleArea2x2(Float201, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / TriangleArea;
 
-		B_RightCoord[0] = TriangleArea2x2(Float202, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / T_Area;
-		B_RightCoord[1] = TriangleArea2x2(Float202, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / T_Area;
-		B_RightCoord[2] = TriangleArea2x2(Float202, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / T_Area;
+		B_RightCoord[0] = TriangleArea2x2(Float202, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / TriangleArea;
+		B_RightCoord[1] = TriangleArea2x2(Float202, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / TriangleArea;
+		B_RightCoord[2] = TriangleArea2x2(Float202, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / TriangleArea;
 
 		//Prepare z-buffer values
-		RS.Line.Left.Z    = B_LeftCoord[0]  * vertex1->ViewCoord[2] + B_LeftCoord[1]  * vertex2->ViewCoord[2] + B_LeftCoord[2]  * vertex3->ViewCoord[2];
-		RS.Line.Right.Z   = B_RightCoord[0] * vertex1->ViewCoord[2] + B_RightCoord[1] * vertex2->ViewCoord[2] + B_RightCoord[2] * vertex3->ViewCoord[2];
-		RS.Line.Current.Z = RS.Line.Left.Z;
+		line.Left.Z    = B_LeftCoord[0]  * vertex1->ViewCoord[2] + B_LeftCoord[1]  * vertex2->ViewCoord[2] + B_LeftCoord[2]  * vertex3->ViewCoord[2];
+		line.Right.Z   = B_RightCoord[0] * vertex1->ViewCoord[2] + B_RightCoord[1] * vertex2->ViewCoord[2] + B_RightCoord[2] * vertex3->ViewCoord[2];
+		line.Current.Z = line.Left.Z;
 
 		//Prepare line length & buffer index
-		RS.Pixel.Index = RS.Line.Index * RC.View.Size[0] + X_LeftClamped;
-		RS.Line.Length = (Float)(RS.Line.Right.X - RS.Line.Left.X);
+		pixel.Index = line.Index * RC.View.Size[0] + X_LeftClamped;
+		line.Length = (Float)(line.Right.X - line.Left.X);
 
 		//Prepare color
 		if (RC.Enable.SmoothShading)
 		{
-			RS.Line.Left.Color[0] = B_LeftCoord[0] * vertex1->LitColor[0] + B_LeftCoord[1] * vertex2->LitColor[0] + B_LeftCoord[2] * vertex3->LitColor[0];
-			RS.Line.Left.Color[1] = B_LeftCoord[0] * vertex1->LitColor[1] + B_LeftCoord[1] * vertex2->LitColor[1] + B_LeftCoord[2] * vertex3->LitColor[1];
-			RS.Line.Left.Color[2] = B_LeftCoord[0] * vertex1->LitColor[2] + B_LeftCoord[1] * vertex2->LitColor[2] + B_LeftCoord[2] * vertex3->LitColor[2];
-			RS.Line.Left.Color[3] = B_LeftCoord[0] * vertex1->LitColor[3] + B_LeftCoord[1] * vertex2->LitColor[3] + B_LeftCoord[2] * vertex3->LitColor[3];
+			line.Left.Color[0] = B_LeftCoord[0] * vertex1->LitColor[0] + B_LeftCoord[1] * vertex2->LitColor[0] + B_LeftCoord[2] * vertex3->LitColor[0];
+			line.Left.Color[1] = B_LeftCoord[0] * vertex1->LitColor[1] + B_LeftCoord[1] * vertex2->LitColor[1] + B_LeftCoord[2] * vertex3->LitColor[1];
+			line.Left.Color[2] = B_LeftCoord[0] * vertex1->LitColor[2] + B_LeftCoord[1] * vertex2->LitColor[2] + B_LeftCoord[2] * vertex3->LitColor[2];
+			line.Left.Color[3] = B_LeftCoord[0] * vertex1->LitColor[3] + B_LeftCoord[1] * vertex2->LitColor[3] + B_LeftCoord[2] * vertex3->LitColor[3];
 
-			RS.Line.Right.Color[0] = B_RightCoord[0] * vertex1->LitColor[0] + B_RightCoord[1] * vertex2->LitColor[0] + B_RightCoord[2] * vertex3->LitColor[0];
-			RS.Line.Right.Color[1] = B_RightCoord[0] * vertex1->LitColor[1] + B_RightCoord[1] * vertex2->LitColor[1] + B_RightCoord[2] * vertex3->LitColor[1];
-			RS.Line.Right.Color[2] = B_RightCoord[0] * vertex1->LitColor[2] + B_RightCoord[1] * vertex2->LitColor[2] + B_RightCoord[2] * vertex3->LitColor[2];
-			RS.Line.Right.Color[3] = B_RightCoord[0] * vertex1->LitColor[3] + B_RightCoord[1] * vertex2->LitColor[3] + B_RightCoord[2] * vertex3->LitColor[3];
+			line.Right.Color[0] = B_RightCoord[0] * vertex1->LitColor[0] + B_RightCoord[1] * vertex2->LitColor[0] + B_RightCoord[2] * vertex3->LitColor[0];
+			line.Right.Color[1] = B_RightCoord[0] * vertex1->LitColor[1] + B_RightCoord[1] * vertex2->LitColor[1] + B_RightCoord[2] * vertex3->LitColor[1];
+			line.Right.Color[2] = B_RightCoord[0] * vertex1->LitColor[2] + B_RightCoord[1] * vertex2->LitColor[2] + B_RightCoord[2] * vertex3->LitColor[2];
+			line.Right.Color[3] = B_RightCoord[0] * vertex1->LitColor[3] + B_RightCoord[1] * vertex2->LitColor[3] + B_RightCoord[2] * vertex3->LitColor[3];
 		
-			CopyVector4(RS.Line.Current.Color, RS.Line.Left.Color);
+			CopyVector4(line.Current.Color, line.Left.Color);
 		}
-	//	else { CopyVector4(&RS.Line.Current.Color[0], &vertex1->LitColor[0]); }
+	//	else { CopyVector4(&line.Current.Color[0], &vertex1->LitColor[0]); }
 
 		//Prepare texture coords
 		if (RC.Enable.Texturing2D)
 		{
-			RS.Line.Left.Numerator.S  = B_LeftCoord[0]  * vertex1->FinTexCoord[0] / RS.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[0] / RS.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[0] / RS.Vertex[2].Clip.W;
-			RS.Line.Right.Numerator.S = B_RightCoord[0] * vertex1->FinTexCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[0] / RS.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[0] / RS.Vertex[2].Clip.W;
+			line.Left.Numerator.S  = B_LeftCoord[0]  * vertex1->FinTexCoord[0] / RS.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[0] / RS.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[0] / RS.Vertex[2].Clip.W;
+			line.Right.Numerator.S = B_RightCoord[0] * vertex1->FinTexCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[0] / RS.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[0] / RS.Vertex[2].Clip.W;
 
-			RS.Line.Left.Numerator.T  = B_LeftCoord[0]  * vertex1->FinTexCoord[1] / RS.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[1] / RS.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[1] / RS.Vertex[2].Clip.W;
-			RS.Line.Right.Numerator.T = B_RightCoord[0] * vertex1->FinTexCoord[1] / RS.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[1] / RS.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[1] / RS.Vertex[2].Clip.W;
+			line.Left.Numerator.T  = B_LeftCoord[0]  * vertex1->FinTexCoord[1] / RS.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[1] / RS.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[1] / RS.Vertex[2].Clip.W;
+			line.Right.Numerator.T = B_RightCoord[0] * vertex1->FinTexCoord[1] / RS.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[1] / RS.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[1] / RS.Vertex[2].Clip.W;
 
-			RS.Line.Left.Denominator.S  = B_LeftCoord[0]  / RS.Vertex[0].Clip.W + B_LeftCoord[1]  / RS.Vertex[1].Clip.W + B_LeftCoord[2]  / RS.Vertex[2].Clip.W;
-			RS.Line.Right.Denominator.S = B_RightCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] / RS.Vertex[1].Clip.W + B_RightCoord[2] / RS.Vertex[2].Clip.W;
+			line.Left.Denominator.S  = B_LeftCoord[0]  / RS.Vertex[0].Clip.W + B_LeftCoord[1]  / RS.Vertex[1].Clip.W + B_LeftCoord[2]  / RS.Vertex[2].Clip.W;
+			line.Right.Denominator.S = B_RightCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] / RS.Vertex[1].Clip.W + B_RightCoord[2] / RS.Vertex[2].Clip.W;
 
-			RS.Line.Left.Denominator.T  = B_LeftCoord[0]  / RS.Vertex[0].Clip.W + B_LeftCoord[1]  / RS.Vertex[1].Clip.W + B_LeftCoord[2]  / RS.Vertex[2].Clip.W;
-			RS.Line.Right.Denominator.T = B_RightCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] / RS.Vertex[1].Clip.W + B_RightCoord[2] / RS.Vertex[2].Clip.W;
+			line.Left.Denominator.T  = B_LeftCoord[0]  / RS.Vertex[0].Clip.W + B_LeftCoord[1]  / RS.Vertex[1].Clip.W + B_LeftCoord[2]  / RS.Vertex[2].Clip.W;
+			line.Right.Denominator.T = B_RightCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] / RS.Vertex[1].Clip.W + B_RightCoord[2] / RS.Vertex[2].Clip.W;
 
-			RS.Line.Current.Numerator.S = RS.Line.Left.Numerator.S;
-			RS.Line.Current.Numerator.T = RS.Line.Left.Numerator.T;
+			line.Current.Numerator.S = line.Left.Numerator.S;
+			line.Current.Numerator.T = line.Left.Numerator.T;
 
-			RS.Line.Current.Denominator.S = RS.Line.Left.Denominator.S;
-			RS.Line.Current.Denominator.T = RS.Line.Left.Denominator.T;
+			line.Current.Denominator.S = line.Left.Denominator.S;
+			line.Current.Denominator.T = line.Left.Denominator.T;
 
 			if (RC.Enable.Fog)
 			{
 				if (RC.Enable.SmoothShading)
 				{
-					RS.Line.Left.Fog    = B_LeftCoord[0]  * vertex1->FogFactor + B_LeftCoord[1]  * vertex2->FogFactor + B_LeftCoord[2]  * vertex3->FogFactor;
-					RS.Line.Right.Fog   = B_RightCoord[0] * vertex1->FogFactor + B_RightCoord[1] * vertex2->FogFactor + B_RightCoord[2] * vertex3->FogFactor;
+					line.Left.Fog    = B_LeftCoord[0]  * vertex1->FogFactor + B_LeftCoord[1]  * vertex2->FogFactor + B_LeftCoord[2]  * vertex3->FogFactor;
+					line.Right.Fog   = B_RightCoord[0] * vertex1->FogFactor + B_RightCoord[1] * vertex2->FogFactor + B_RightCoord[2] * vertex3->FogFactor;
 
-					RS.Line.Current.Fog = RS.Line.Left.Fog;
+					line.Current.Fog = line.Left.Fog;
 				}
 			}
 		}
 
 		//Prepare iterators
-		if (RS.Line.Length != 0)
+		if (line.Length != 0)
 		{ 
-			RS.Line.Iterator.Z = (RS.Line.Right.Z - RS.Line.Left.Z) / RS.Line.Length; 
+			line.Iterator.Z = (line.Right.Z - line.Left.Z) / line.Length; 
 
 			if (RC.Enable.SmoothShading)
 			{
-				SubtractVectors4(RS.Line.Iterator.Color, RS.Line.Right.Color,    RS.Line.Left.Color);
-				DivideVector4   (RS.Line.Iterator.Color, RS.Line.Iterator.Color, RS.Line.Length);
+				SubtractVectors4(line.Iterator.Color, line.Right.Color,    line.Left.Color);
+				DivideVector4   (line.Iterator.Color, line.Iterator.Color, line.Length);
 			}
 
 			if (RC.Enable.Texturing2D)
 			{
-				RS.Line.Iterator.Numerator.S   = (RS.Line.Right.Numerator.S   - RS.Line.Left.Numerator.S)   / RS.Line.Length;
-				RS.Line.Iterator.Denominator.S = (RS.Line.Right.Denominator.S - RS.Line.Left.Denominator.S) / RS.Line.Length;
+				line.Iterator.Numerator.S   = (line.Right.Numerator.S   - line.Left.Numerator.S)   / line.Length;
+				line.Iterator.Denominator.S = (line.Right.Denominator.S - line.Left.Denominator.S) / line.Length;
 				
-				RS.Line.Iterator.Numerator.T   = (RS.Line.Right.Numerator.T   - RS.Line.Left.Numerator.T)   / RS.Line.Length;
-				RS.Line.Iterator.Denominator.T = (RS.Line.Right.Denominator.T - RS.Line.Left.Denominator.T) / RS.Line.Length;
+				line.Iterator.Numerator.T   = (line.Right.Numerator.T   - line.Left.Numerator.T)   / line.Length;
+				line.Iterator.Denominator.T = (line.Right.Denominator.T - line.Left.Denominator.T) / line.Length;
 
-				if (RC.Enable.Fog) { RS.Line.Iterator.Fog = (RS.Line.Right.Fog - RS.Line.Left.Fog) / RS.Line.Length; }
+				if (RC.Enable.Fog) { line.Iterator.Fog = (line.Right.Fog - line.Left.Fog) / line.Length; }
 			}
 		}
 		else 
 		{
-			RS.Line.Iterator.Z = 0; 
+			line.Iterator.Z = 0; 
 
-			if (RC.Enable.SmoothShading) { ZeroVector4(RS.Line.Iterator.Color); }
+			if (RC.Enable.SmoothShading) { ZeroVector4(line.Iterator.Color); }
 
 			if (RC.Enable.Texturing2D)
 			{
-				RS.Line.Iterator.Numerator.S   = 0;
-				RS.Line.Iterator.Denominator.S = 0;
+				line.Iterator.Numerator.S   = 0;
+				line.Iterator.Denominator.S = 0;
 				
-				RS.Line.Iterator.Numerator.T   = 0;
-				RS.Line.Iterator.Denominator.T = 0;
+				line.Iterator.Numerator.T   = 0;
+				line.Iterator.Denominator.T = 0;
 
-				if (RC.Enable.Fog) { RS.Line.Iterator.Fog = 0; }
+				if (RC.Enable.Fog) { line.Iterator.Fog = 0; }
 			}
 		}
 
@@ -851,20 +883,20 @@ namespace ShadowGLPrivate
 			for (X_LeftClamped; X_LeftClamped <= X_RightClamped; X_LeftClamped++)
 			{
 				//Calculate current texture coordinates
-				RS.Line.Current.S = RS.Line.Current.Numerator.S / RS.Line.Current.Denominator.S;
-				RS.Line.Current.T = RS.Line.Current.Numerator.T / RS.Line.Current.Denominator.T;
+				line.Current.S = line.Current.Numerator.S / line.Current.Denominator.S;
+				line.Current.T = line.Current.Numerator.T / line.Current.Denominator.T;
 
 				//Implicitly set texture wrap mode to repeat
-				if (RS.Line.Current.S > 1) { RS.Line.Current.S -= (Int)RS.Line.Current.S; }
-				if (RS.Line.Current.S < 0) { RS.Line.Current.S -= (Int)RS.Line.Current.S - 1; }
-				if (RS.Line.Current.T > 1) { RS.Line.Current.T -= (Int)RS.Line.Current.T; }
-				if (RS.Line.Current.T < 0) { RS.Line.Current.T -= (Int)RS.Line.Current.T - 1; }
+				if (line.Current.S > 1) { line.Current.S -= (Int)line.Current.S; }
+				if (line.Current.S < 0) { line.Current.S -= (Int)line.Current.S - 1; }
+				if (line.Current.T > 1) { line.Current.T -= (Int)line.Current.T; }
+				if (line.Current.T < 0) { line.Current.T -= (Int)line.Current.T - 1; }
 
 				//Use linear filtering 
 				if (true)
 				{
-					float uMinusHalf = TextureWidth * RS.Line.Current.S - 0.5f;
-					float vMinusHalf = TextureHeight * RS.Line.Current.T - 0.5f;
+					float uMinusHalf = TextureWidth * line.Current.S - 0.5f;
+					float vMinusHalf = TextureHeight * line.Current.T - 0.5f;
 
 					if (uMinusHalf < 0) { uMinusHalf = 0; }
 					if (vMinusHalf < 0) { vMinusHalf = 0; }
@@ -888,67 +920,67 @@ namespace ShadowGLPrivate
 					float alpha = uMinusHalf - (Int)uMinusHalf;
 					float beta  = vMinusHalf - (Int)vMinusHalf;
 
-					RS.Pixel.Color[0] = RS.Line.Current.Color[0] * ((1 - alpha) * (1 - beta) * GET_R_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_R_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_R_NOMALIZED(Texel10) + alpha * beta * GET_R_NOMALIZED(Texel11));
-					RS.Pixel.Color[1] = RS.Line.Current.Color[1] * ((1 - alpha) * (1 - beta) * GET_G_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_G_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_G_NOMALIZED(Texel10) + alpha * beta * GET_G_NOMALIZED(Texel11));
-					RS.Pixel.Color[2] = RS.Line.Current.Color[2] * ((1 - alpha) * (1 - beta) * GET_B_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_B_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_B_NOMALIZED(Texel10) + alpha * beta * GET_B_NOMALIZED(Texel11));
-					RS.Pixel.Color[3] = RS.Line.Current.Color[3];
+					pixel.Color[0] = line.Current.Color[0] * ((1 - alpha) * (1 - beta) * GET_R_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_R_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_R_NOMALIZED(Texel10) + alpha * beta * GET_R_NOMALIZED(Texel11));
+					pixel.Color[1] = line.Current.Color[1] * ((1 - alpha) * (1 - beta) * GET_G_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_G_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_G_NOMALIZED(Texel10) + alpha * beta * GET_G_NOMALIZED(Texel11));
+					pixel.Color[2] = line.Current.Color[2] * ((1 - alpha) * (1 - beta) * GET_B_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_B_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_B_NOMALIZED(Texel10) + alpha * beta * GET_B_NOMALIZED(Texel11));
+					pixel.Color[3] = line.Current.Color[3];
 				}
 				else
 				{
 					//Fetch texel
-					Texel = *(UINT*)(&pTexture[((Int)(TextureHeight * RS.Line.Current.T) * TextureWidth + (Int)(TextureWidth * RS.Line.Current.S)) * RS.Texture.Components]);
+					Texel = *(UINT*)(&pTexture[((Int)(TextureHeight * line.Current.T) * TextureWidth + (Int)(TextureWidth * line.Current.S)) * RS.Texture.Components]);
 
-					RS.Pixel.Color[0] = RS.Line.Current.Color[0] * ((BYTE)(Texel)       * 0.00392156862745098f);
-					RS.Pixel.Color[1] = RS.Line.Current.Color[1] * ((BYTE)(Texel >> 8)  * 0.00392156862745098f);
-					RS.Pixel.Color[2] = RS.Line.Current.Color[2] * ((BYTE)(Texel >> 16) * 0.00392156862745098f);
-					RS.Pixel.Color[3] = RS.Line.Current.Color[3];
+					pixel.Color[0] = line.Current.Color[0] * ((BYTE)(Texel)       * 0.00392156862745098f);
+					pixel.Color[1] = line.Current.Color[1] * ((BYTE)(Texel >> 8)  * 0.00392156862745098f);
+					pixel.Color[2] = line.Current.Color[2] * ((BYTE)(Texel >> 16) * 0.00392156862745098f);
+					pixel.Color[3] = line.Current.Color[3];
 				}
 
 				//Implicitly use SGL_MODULATE as texture environment mode
-	/*			RS.Pixel.Color[0] = RS.Line.Current.Color[0] * (pTexture[TexelIndex]		* 0.00392156862745098f);
-				RS.Pixel.Color[1] = RS.Line.Current.Color[1] * (pTexture[TexelIndex + 1]	* 0.00392156862745098f);
-				RS.Pixel.Color[2] = RS.Line.Current.Color[2] * (pTexture[TexelIndex + 2]	* 0.00392156862745098f);
-				RS.Pixel.Color[3] = RS.Line.Current.Color[3];
+	/*			pixel.Color[0] = line.Current.Color[0] * (pTexture[TexelIndex]		* 0.00392156862745098f);
+				pixel.Color[1] = line.Current.Color[1] * (pTexture[TexelIndex + 1]	* 0.00392156862745098f);
+				pixel.Color[2] = line.Current.Color[2] * (pTexture[TexelIndex + 2]	* 0.00392156862745098f);
+				pixel.Color[3] = line.Current.Color[3];
 	*/
 				//Apply fog
 				if (RC.Enable.Fog)
 				{
-					RS.Pixel.Color[0] = RS.Line.Current.Fog * RS.Pixel.Color[0] + (1 - RS.Line.Current.Fog) * RS.Fog.Color[0];
-					RS.Pixel.Color[1] = RS.Line.Current.Fog * RS.Pixel.Color[1] + (1 - RS.Line.Current.Fog) * RS.Fog.Color[1];
-					RS.Pixel.Color[2] = RS.Line.Current.Fog * RS.Pixel.Color[2] + (1 - RS.Line.Current.Fog) * RS.Fog.Color[2];
+					pixel.Color[0] = line.Current.Fog * pixel.Color[0] + (1 - line.Current.Fog) * RS.Fog.Color[0];
+					pixel.Color[1] = line.Current.Fog * pixel.Color[1] + (1 - line.Current.Fog) * RS.Fog.Color[1];
+					pixel.Color[2] = line.Current.Fog * pixel.Color[2] + (1 - line.Current.Fog) * RS.Fog.Color[2];
 				}
 
-				RS.Pixel.Write.Color  = (UByte)(255 * RS.Pixel.Color[3]); RS.Pixel.Write.Color <<= 8;
-				RS.Pixel.Write.Color += (UByte)(255 * RS.Pixel.Color[0]); RS.Pixel.Write.Color <<= 8;
-				RS.Pixel.Write.Color += (UByte)(255 * RS.Pixel.Color[1]); RS.Pixel.Write.Color <<= 8;
-				RS.Pixel.Write.Color += (UByte)(255 * RS.Pixel.Color[2]);
+				pixel.Write.Color  = (UByte)(255 * pixel.Color[3]); pixel.Write.Color <<= 8;
+				pixel.Write.Color += (UByte)(255 * pixel.Color[0]); pixel.Write.Color <<= 8;
+				pixel.Write.Color += (UByte)(255 * pixel.Color[1]); pixel.Write.Color <<= 8;
+				pixel.Write.Color += (UByte)(255 * pixel.Color[2]);
 
 				//Perform depth test & write to buffers
-				if (RS.Line.Current.Z < Buffer.Depth[RS.Pixel.Index])
+				if (line.Current.Z < Buffer.Depth[pixel.Index])
 				{
-					Buffer.Back [RS.Pixel.Index] = RS.Pixel.Write.Color; 
-					Buffer.Depth[RS.Pixel.Index] = RS.Line.Current.Z; 
+					Buffer.Back [pixel.Index] = pixel.Write.Color; 
+					Buffer.Depth[pixel.Index] = line.Current.Z; 
 				}
-				RS.Pixel.Index++;
+				pixel.Index++;
 
 				//Update vertex color 
 				if (RC.Enable.SmoothShading)
 				{ 
-					AddVectors4(RS.Line.Current.Color, RS.Line.Current.Color, RS.Line.Iterator.Color);	
+					AddVectors4(line.Current.Color, line.Current.Color, line.Iterator.Color);	
 
 					//Update fog state
-					if (RC.Enable.Fog) { RS.Line.Current.Fog += RS.Line.Iterator.Fog; }
+					if (RC.Enable.Fog) { line.Current.Fog += line.Iterator.Fog; }
 				}
 
 				//Update z buffer state
-				RS.Line.Current.Z += RS.Line.Iterator.Z;
+				line.Current.Z += line.Iterator.Z;
 
 				//Update texture state
-				RS.Line.Current.Numerator.S   += RS.Line.Iterator.Numerator.S;
-				RS.Line.Current.Denominator.S += RS.Line.Iterator.Denominator.S;
+				line.Current.Numerator.S   += line.Iterator.Numerator.S;
+				line.Current.Denominator.S += line.Iterator.Denominator.S;
 
-				RS.Line.Current.Numerator.T   += RS.Line.Iterator.Numerator.T;
-				RS.Line.Current.Denominator.T += RS.Line.Iterator.Denominator.T;
+				line.Current.Numerator.T   += line.Iterator.Numerator.T;
+				line.Current.Denominator.T += line.Iterator.Denominator.T;
 			}
 		}
 		else
@@ -957,18 +989,18 @@ namespace ShadowGLPrivate
 			{
 				for (X_LeftClamped; X_LeftClamped <= (Int)X_RightClamped; X_LeftClamped++)
 				{
-					RS.Pixel.Write.Color  = (UByte)(255 * RS.Line.Current.Color[3]); RS.Pixel.Write.Color <<= 8;
-					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[0]); RS.Pixel.Write.Color <<= 8;
-					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[1]); RS.Pixel.Write.Color <<= 8;
-					RS.Pixel.Write.Color += (UByte)(255 * RS.Line.Current.Color[2]);
+					pixel.Write.Color  = (UByte)(255 * line.Current.Color[3]); pixel.Write.Color <<= 8;
+					pixel.Write.Color += (UByte)(255 * line.Current.Color[0]); pixel.Write.Color <<= 8;
+					pixel.Write.Color += (UByte)(255 * line.Current.Color[1]); pixel.Write.Color <<= 8;
+					pixel.Write.Color += (UByte)(255 * line.Current.Color[2]);
 
 					//Scan one line
-					if (RS.Line.Current.Z < Buffer.Depth[RS.Pixel.Index]) { Buffer.Back[RS.Pixel.Index] = RS.Pixel.Write.Color; Buffer.Depth[RS.Pixel.Index] = RS.Line.Current.Z; }
-					RS.Pixel.Index++;
+					if (line.Current.Z < Buffer.Depth[pixel.Index]) { Buffer.Back[pixel.Index] = pixel.Write.Color; Buffer.Depth[pixel.Index] = line.Current.Z; }
+					pixel.Index++;
 
 					//Update state
-					AddVectors4(RS.Line.Current.Color, RS.Line.Current.Color, RS.Line.Iterator.Color);	
-					RS.Line.Current.Z += RS.Line.Iterator.Z;
+					AddVectors4(line.Current.Color, line.Current.Color, line.Iterator.Color);	
+					line.Current.Z += line.Iterator.Z;
 				}
 			}
 			else
@@ -976,8 +1008,8 @@ namespace ShadowGLPrivate
 				for (X_LeftClamped; X_LeftClamped <= (Int)X_RightClamped; X_LeftClamped++)
 				{
 					//Scan one line & update state
-					if (RS.Line.Current.Z < Buffer.Depth[RS.Pixel.Index]) { Buffer.Back[RS.Pixel.Index] = RS.Pixel.Write.Color; Buffer.Depth[RS.Pixel.Index] = RS.Line.Current.Z; }
-					RS.Pixel.Index++; RS.Line.Current.Z += RS.Line.Iterator.Z;
+					if (line.Current.Z < Buffer.Depth[pixel.Index]) { Buffer.Back[pixel.Index] = pixel.Write.Color; Buffer.Depth[pixel.Index] = line.Current.Z; }
+					pixel.Index++; line.Current.Z += line.Iterator.Z;
 				}
 			}
 		}
