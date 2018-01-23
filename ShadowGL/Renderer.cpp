@@ -736,19 +736,17 @@ namespace ShadowGLPrivate
 
 		if (vertex2->ViewCoord[0] >= (- Coefficient_13 * vertex2->ViewCoord[1] - Offset_13)) 
 		{
-			std::future<void> result1(std::async(std::launch::async, RasterizeTopPartOfTriangleWithMiddleVertexRight,    vertex1, vertex2, vertex3));
-			std::future<void> result2(std::async(std::launch::async, RasterizeBottomPartOfTriangleWithMiddleVertexRight, vertex1, vertex2, vertex3));
+			std::future<void> future(std::async(std::launch::async, RasterizeTopPartOfTriangleWithMiddleVertexRight, vertex1, vertex2, vertex3));
+			RasterizeBottomPartOfTriangleWithMiddleVertexRight(vertex1, vertex2, vertex3);
 
-			result1.get();
-			result2.get();
+            future.wait();
 		}
 		else
 		{
-            std::future<void> result1(std::async(std::launch::async, RasterizeTopPartOfTriangleWithMiddleVertexLeft,    vertex1, vertex2, vertex3));
-			std::future<void> result2(std::async(std::launch::async, RasterizeBottomPartOfTriangleWithMiddleVertexLeft, vertex1, vertex2, vertex3));
+            std::future<void> future(std::async(std::launch::async, RasterizeTopPartOfTriangleWithMiddleVertexLeft, vertex1, vertex2, vertex3));
+			RasterizeBottomPartOfTriangleWithMiddleVertexLeft(vertex1, vertex2, vertex3);
 
-			result1.get();
-			result2.get();		
+            future.wait();
 		}
 	}
 
@@ -800,7 +798,7 @@ namespace ShadowGLPrivate
 		
 			CopyVector4(line.Current.Color, line.Left.Color);
 		}
-	//	else { CopyVector4(&line.Current.Color[0], &vertex1->LitColor[0]); }
+		//else { CopyVector4(line.Current.Color, vertex1->LitColor); }
 
 		//Prepare texture coords
 		if (RC.Enable.Texturing2D)
@@ -892,76 +890,78 @@ namespace ShadowGLPrivate
 				if (line.Current.T > 1) { line.Current.T -= (Int)line.Current.T; }
 				if (line.Current.T < 0) { line.Current.T -= (Int)line.Current.T - 1; }
 
-				//Use linear filtering 
-				if (true)
-				{
-					float uMinusHalf = TextureWidth * line.Current.S - 0.5f;
-					float vMinusHalf = TextureHeight * line.Current.T - 0.5f;
+                //Perform depth test
+                if (line.Current.Z < Buffer.Depth[pixel.Index])
+                {
+				    //Use linear filtering 
+				    if (true)
+				    {
+					    float uMinusHalf = TextureWidth * line.Current.S - 0.5f;
+					    float vMinusHalf = TextureHeight * line.Current.T - 0.5f;
 
-					if (uMinusHalf < 0) { uMinusHalf = 0; }
-					if (vMinusHalf < 0) { vMinusHalf = 0; }
+					    if (uMinusHalf < 0) { uMinusHalf = 0; }
+					    if (vMinusHalf < 0) { vMinusHalf = 0; }
 
-					Int i0 = (Int)uMinusHalf;
-					Int j0 = (Int)vMinusHalf;
-					Int i1 = i0 + 1;
-					Int j1 = j0 + 1;
+					    Int i0 = (Int)uMinusHalf;
+					    Int j0 = (Int)vMinusHalf;
+					    Int i1 = i0 + 1;
+					    Int j1 = j0 + 1;
 
-					if (i0 == TextureWidth)  { i0--; }
-					if (j0 == TextureHeight) { j0--; }
-					if (i1 == TextureWidth)  { i1--; }
-					if (j1 == TextureHeight) { j1--; }
+					    if (i0 == TextureWidth)  { i0--; }
+					    if (j0 == TextureHeight) { j0--; }
+					    if (i1 == TextureWidth)  { i1--; }
+					    if (j1 == TextureHeight) { j1--; }
 
-					//Fetch 4 texels
-					UINT Texel00 = *(UINT*)(&pTexture[(j0 * TextureWidth + i0) * RS.Texture.Components]);
-					UINT Texel01 = *(UINT*)(&pTexture[(j0 * TextureWidth + i1) * RS.Texture.Components]);
-					UINT Texel10 = *(UINT*)(&pTexture[(j1 * TextureWidth + i0) * RS.Texture.Components]);
-					UINT Texel11 = *(UINT*)(&pTexture[(j1 * TextureWidth + i1) * RS.Texture.Components]);
+					    //Fetch 4 texels
+					    UINT Texel00 = *(UINT*)(&pTexture[(j0 * TextureWidth + i0) * RS.Texture.Components]);
+					    UINT Texel01 = *(UINT*)(&pTexture[(j0 * TextureWidth + i1) * RS.Texture.Components]);
+					    UINT Texel10 = *(UINT*)(&pTexture[(j1 * TextureWidth + i0) * RS.Texture.Components]);
+					    UINT Texel11 = *(UINT*)(&pTexture[(j1 * TextureWidth + i1) * RS.Texture.Components]);
 
-					float alpha = uMinusHalf - (Int)uMinusHalf;
-					float beta  = vMinusHalf - (Int)vMinusHalf;
+					    float alpha = uMinusHalf - (Int)uMinusHalf;
+					    float beta  = vMinusHalf - (Int)vMinusHalf;
 
-					pixel.Color[0] = line.Current.Color[0] * ((1 - alpha) * (1 - beta) * GET_R_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_R_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_R_NOMALIZED(Texel10) + alpha * beta * GET_R_NOMALIZED(Texel11));
-					pixel.Color[1] = line.Current.Color[1] * ((1 - alpha) * (1 - beta) * GET_G_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_G_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_G_NOMALIZED(Texel10) + alpha * beta * GET_G_NOMALIZED(Texel11));
-					pixel.Color[2] = line.Current.Color[2] * ((1 - alpha) * (1 - beta) * GET_B_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_B_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_B_NOMALIZED(Texel10) + alpha * beta * GET_B_NOMALIZED(Texel11));
-					pixel.Color[3] = line.Current.Color[3];
-				}
-				else
-				{
-					//Fetch texel
-					Texel = *(UINT*)(&pTexture[((Int)(TextureHeight * line.Current.T) * TextureWidth + (Int)(TextureWidth * line.Current.S)) * RS.Texture.Components]);
+					    pixel.Color[0] = line.Current.Color[0] * ((1 - alpha) * (1 - beta) * GET_R_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_R_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_R_NOMALIZED(Texel10) + alpha * beta * GET_R_NOMALIZED(Texel11));
+					    pixel.Color[1] = line.Current.Color[1] * ((1 - alpha) * (1 - beta) * GET_G_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_G_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_G_NOMALIZED(Texel10) + alpha * beta * GET_G_NOMALIZED(Texel11));
+					    pixel.Color[2] = line.Current.Color[2] * ((1 - alpha) * (1 - beta) * GET_B_NOMALIZED(Texel00) + alpha * (1 - beta) * GET_B_NOMALIZED(Texel01) + (1 - alpha) * beta * GET_B_NOMALIZED(Texel10) + alpha * beta * GET_B_NOMALIZED(Texel11));
+					    pixel.Color[3] = line.Current.Color[3];
+				    }
+				    else
+				    {
+					    //Fetch texel
+					    Texel = *(UINT*)(&pTexture[((Int)(TextureHeight * line.Current.T) * TextureWidth + (Int)(TextureWidth * line.Current.S)) * RS.Texture.Components]);
 
-					pixel.Color[0] = line.Current.Color[0] * ((BYTE)(Texel)       * 0.00392156862745098f);
-					pixel.Color[1] = line.Current.Color[1] * ((BYTE)(Texel >> 8)  * 0.00392156862745098f);
-					pixel.Color[2] = line.Current.Color[2] * ((BYTE)(Texel >> 16) * 0.00392156862745098f);
-					pixel.Color[3] = line.Current.Color[3];
-				}
+					    pixel.Color[0] = line.Current.Color[0] * ((BYTE)(Texel)       * 0.00392156862745098f);
+					    pixel.Color[1] = line.Current.Color[1] * ((BYTE)(Texel >> 8)  * 0.00392156862745098f);
+					    pixel.Color[2] = line.Current.Color[2] * ((BYTE)(Texel >> 16) * 0.00392156862745098f);
+					    pixel.Color[3] = line.Current.Color[3];
+				    }
 
-				//Implicitly use SGL_MODULATE as texture environment mode
-	/*			pixel.Color[0] = line.Current.Color[0] * (pTexture[TexelIndex]		* 0.00392156862745098f);
-				pixel.Color[1] = line.Current.Color[1] * (pTexture[TexelIndex + 1]	* 0.00392156862745098f);
-				pixel.Color[2] = line.Current.Color[2] * (pTexture[TexelIndex + 2]	* 0.00392156862745098f);
-				pixel.Color[3] = line.Current.Color[3];
-	*/
-				//Apply fog
-				if (RC.Enable.Fog)
-				{
-					pixel.Color[0] = line.Current.Fog * pixel.Color[0] + (1 - line.Current.Fog) * RS.Fog.Color[0];
-					pixel.Color[1] = line.Current.Fog * pixel.Color[1] + (1 - line.Current.Fog) * RS.Fog.Color[1];
-					pixel.Color[2] = line.Current.Fog * pixel.Color[2] + (1 - line.Current.Fog) * RS.Fog.Color[2];
-				}
+				    //Implicitly use SGL_MODULATE as texture environment mode
+	    /*			pixel.Color[0] = line.Current.Color[0] * (pTexture[TexelIndex]		* 0.00392156862745098f);
+				    pixel.Color[1] = line.Current.Color[1] * (pTexture[TexelIndex + 1]	* 0.00392156862745098f);
+				    pixel.Color[2] = line.Current.Color[2] * (pTexture[TexelIndex + 2]	* 0.00392156862745098f);
+				    pixel.Color[3] = line.Current.Color[3];
+	    */
+				    //Apply fog
+				    if (RC.Enable.Fog)
+				    {
+					    pixel.Color[0] = line.Current.Fog * pixel.Color[0] + (1 - line.Current.Fog) * RS.Fog.Color[0];
+					    pixel.Color[1] = line.Current.Fog * pixel.Color[1] + (1 - line.Current.Fog) * RS.Fog.Color[1];
+					    pixel.Color[2] = line.Current.Fog * pixel.Color[2] + (1 - line.Current.Fog) * RS.Fog.Color[2];
+				    }
 
-				pixel.Write.Color  = (UByte)(255 * pixel.Color[3]); pixel.Write.Color <<= 8;
-				pixel.Write.Color += (UByte)(255 * pixel.Color[0]); pixel.Write.Color <<= 8;
-				pixel.Write.Color += (UByte)(255 * pixel.Color[1]); pixel.Write.Color <<= 8;
-				pixel.Write.Color += (UByte)(255 * pixel.Color[2]);
+				    pixel.Write.Color  = (UByte)(255 * pixel.Color[3]); pixel.Write.Color <<= 8;
+				    pixel.Write.Color += (UByte)(255 * pixel.Color[0]); pixel.Write.Color <<= 8;
+				    pixel.Write.Color += (UByte)(255 * pixel.Color[1]); pixel.Write.Color <<= 8;
+				    pixel.Write.Color += (UByte)(255 * pixel.Color[2]);
 
-				//Perform depth test & write to buffers
-				if (line.Current.Z < Buffer.Depth[pixel.Index])
-				{
-					Buffer.Back [pixel.Index] = pixel.Write.Color; 
-					Buffer.Depth[pixel.Index] = line.Current.Z; 
-				}
-				pixel.Index++;
+				    //Write to buffers
+                    Buffer.Back[pixel.Index] = pixel.Write.Color;
+                    Buffer.Depth[pixel.Index] = line.Current.Z;
+                }
+
+                pixel.Index++;
 
 				//Update vertex color 
 				if (RC.Enable.SmoothShading)
