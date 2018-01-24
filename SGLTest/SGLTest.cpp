@@ -17,15 +17,15 @@ using namespace SCFImaging;
 // Global Variables:
 HINSTANCE	hInst;							
 
-bool		Animate = TRUE;
-bool		Focused = TRUE;
-bool		Minimized = FALSE;
-bool		ShowPlane = FALSE;
-bool		ShowBox = TRUE;
-bool		WasAnimating = FALSE;
-bool		MouseLook = FALSE;
+bool		Animate = true;
+bool		Focused = true;
+bool		Minimized = false;
+bool		ShowPlane = false;
+bool		ShowBox = true;
+bool		WasAnimating = false;
+bool		MouseLook = false;
 
-HWND		hWindow = NULL;
+HWND		hWindow = nullptr;
 
 Float4	LightPos;
 Float4	Diffuse;
@@ -64,9 +64,9 @@ BOOL CALLBACK		FogOptions(HWND, UINT, WPARAM, LPARAM);
 void				DrawScene(HDC hDC);
 void				DrawCube();
 
-HRC					hRC = NULL;
+HRC					hRC = nullptr;
 
-BOOL				Quit = FALSE;
+BOOL				Quit = false;
 
 #define KEYDOWN(name, key) (((name)[(key)] & 0x80) != 0) 
 
@@ -74,6 +74,145 @@ BYTE KeysPressedLast[256] = { 0 };
 BYTE KeysPressed[256]     = { 0 };
 
 bool ButtonPressed(_IN UCHAR ucButton) { return (!KEYDOWN(KeysPressedLast, ucButton) &&  KEYDOWN(KeysPressed, ucButton)); } 
+bool ButtonDown(_IN UCHAR ucButton) { return KEYDOWN(KeysPressed, ucButton); }
+
+void ProcessKeyboardInput()
+{
+    memcpy(KeysPressedLast, KeysPressed, 256);
+    GetKeyboardState(KeysPressed);
+
+    if (MouseLook)
+    {
+        GetCursorPos(&MousePos);
+
+        RECT l_Rect;
+        GetWindowRect(hWindow, &l_Rect);
+
+        CameraAngle[1] -= Float(MousePos.x - (l_Rect.left + (l_Rect.right - l_Rect.left) / 2)) / 10.0f;
+        CameraAngle[0] -= Float(MousePos.y - (l_Rect.top + (l_Rect.bottom - l_Rect.top) / 2)) / 10.0f;
+
+        SetCursorPos(l_Rect.left + (l_Rect.right - l_Rect.left) / 2, l_Rect.top + (l_Rect.bottom - l_Rect.top) / 2);
+    }
+
+    if (GetForegroundWindow() != hWindow)
+    {
+        Focused = false;
+        WasAnimating = Animate;
+        Animate = false;
+    }
+    else
+    {
+        switch (MoveMode)
+        {
+            case 1:
+            {
+                if (ButtonDown(VK_UP))    { LightPos[1] += 10; }
+                if (ButtonDown(VK_DOWN))  { LightPos[1] -= 10; }
+                if (ButtonDown(VK_LEFT))  { LightPos[0] -= 10; }
+                if (ButtonDown(VK_RIGHT)) { LightPos[0] += 10; }
+                break;
+            }
+            case 2:
+            {
+                if (ButtonDown(VK_UP))    { CubePos01[1] += 10; }
+                if (ButtonDown(VK_DOWN))  { CubePos01[1] -= 10; }
+                if (ButtonDown(VK_LEFT))  { CubePos01[0] -= 10; }
+                if (ButtonDown(VK_RIGHT)) { CubePos01[0] += 10; }
+                break;
+            }
+            case 3:
+            {
+                if (ButtonDown(VK_UP))    { CubePos02[1] += 10; }
+                if (ButtonDown(VK_DOWN))  { CubePos02[1] -= 10; }
+                if (ButtonDown(VK_LEFT))  { CubePos02[0] -= 10; }
+                if (ButtonDown(VK_RIGHT)) { CubePos02[0] += 10; }
+                break;
+            }
+            case 4:
+            {
+                if (ButtonDown(VK_UP))    { PlanePos[1] += 10; }
+                if (ButtonDown(VK_DOWN))  { PlanePos[1] -= 10; }
+                if (ButtonDown(VK_LEFT))  { PlanePos[0] -= 10; }
+                if (ButtonDown(VK_RIGHT)) { PlanePos[0] += 10; }
+                break;
+            }
+            case 0:
+            {
+                if (ButtonDown(VK_UP))
+                {
+                    Float3 l_MoveVector = { 0, 0, -1 };
+
+                    RotateVector3(l_MoveVector, l_MoveVector, CameraAngle);
+                    ScaleVector3(l_MoveVector, l_MoveVector, 10);
+                    AddVectors3(CameraPos, CameraPos, l_MoveVector);
+                }
+                if (ButtonDown(VK_DOWN))
+                {
+                    Float3 l_MoveVector = { 0, 0, -1 };
+
+                    RotateVector3(l_MoveVector, l_MoveVector, CameraAngle);
+                    ScaleVector3(l_MoveVector, l_MoveVector, -10);
+                    AddVectors3(CameraPos, CameraPos, l_MoveVector);
+                }
+                if (ButtonDown(VK_LEFT))
+                {
+                    Float3 l_MoveVector = { 1, 0, 0 };
+
+                    RotateVector3(l_MoveVector, l_MoveVector, CameraAngle);
+                    ScaleVector3(l_MoveVector, l_MoveVector, -10);
+                    AddVectors3(CameraPos, CameraPos, l_MoveVector);
+                }
+                if (ButtonDown(VK_RIGHT))
+                {
+                    Float3 l_MoveVector = { 1, 0, 0 };
+
+                    RotateVector3(l_MoveVector, l_MoveVector, CameraAngle);
+                    ScaleVector3(l_MoveVector, l_MoveVector, 10);
+                    AddVectors3(CameraPos, CameraPos, l_MoveVector);
+                }
+                break;
+            }
+        }
+
+        if (ButtonPressed(VK_ESCAPE)) { DestroyWindow(hWindow); return; }
+
+        if (ButtonPressed(VK_TAB)) { MoveMode++; if (MoveMode > 4) { MoveMode = 0; } }
+
+        if (ButtonPressed(VK_OEM_3))
+        {
+            MouseLook = !MouseLook;
+
+            if (MouseLook)
+            {
+                GetCursorPos(&OriginalMousePos);
+
+                SetCapture(hWindow);
+
+                RECT l_Rect;
+                GetWindowRect(hWindow, &l_Rect);
+                SetCursorPos(l_Rect.left + (l_Rect.right - l_Rect.left) / 2, l_Rect.top + (l_Rect.bottom - l_Rect.top) / 2);
+                ShowCursor(false);
+            }
+            else
+            {
+                ReleaseCapture();
+                SetCursorPos(OriginalMousePos.x, OriginalMousePos.y);
+                ShowCursor(true);
+            }
+        }
+
+        if (ButtonPressed(VK_SPACE)) { Animate = !Animate; }
+        if (ButtonPressed('P')) { ShowPlane = !ShowPlane; }
+        if (ButtonPressed('B')) { ShowBox = !ShowBox; }
+
+        if (ButtonPressed(VK_ADD)) { Angle_Iterator[1] += 0.1f; }
+        if (ButtonPressed(VK_SUBTRACT)) { Angle_Iterator[1] -= 0.1f; }
+
+        if (ButtonPressed('F')) { if (IsEnabled(SGL_FOG)) { Disable(SGL_FOG); } else { Enable(SGL_FOG); } }
+        if (ButtonPressed('T')) { if (IsEnabled(SGL_TEXTURE_2D)) { Disable(SGL_TEXTURE_2D); } else { Enable(SGL_TEXTURE_2D); } }
+        if (ButtonPressed('L')) { if (IsEnabled(SGL_LIGHTING)) { Disable(SGL_LIGHTING); } else { Enable(SGL_LIGHTING); } }
+    }
+}
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -83,179 +222,37 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     MSG msg; msg.wParam = 0;
 
     //Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow)) { return FALSE; }
+    if (!InitInstance (hInstance, nCmdShow)) { return false; }
 
     ResetTime02();
 
     while (!Quit)  
     {
-        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))  
+        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
-            //if ((msg.message == WM_KEYDOWN) ||
-            //	(msg.message == WM_KEYUP) ||
-            //	(msg.message == WM_CHAR))
-            //{
-            //	continue;
-            //}
-
-            if (msg.message == WM_QUIT) { Quit = TRUE; }
-            else  
+            if (msg.message == WM_QUIT) { Quit = true; }
+            else
             {
-                TranslateMessage(&msg);  
-                DispatchMessage(&msg);   
+                //TranslateMessage is not used, instead we use GetKeyboardState
+                DispatchMessage(&msg);
             }
         }
         else
         {
             if (GetTime02() < 0.02) { continue; }
-            else                    { ResetTime02(); }
+
+            ResetTime02();
+            ProcessKeyboardInput();
 
             if (!Minimized & Focused)
             {
-                memcpy(KeysPressedLast, KeysPressed, 256);
-                GetKeyboardState(KeysPressed);
-
-                if (MouseLook)
-                {
-                    GetCursorPos(&MousePos); 
-
-                    RECT l_Rect;
-                    GetWindowRect(hWindow, &l_Rect);
-
-                    CameraAngle[1] -= Float(MousePos.x - (l_Rect.left + (l_Rect.right  - l_Rect.left) / 2)) / 10.0f;
-                    CameraAngle[0] -= Float(MousePos.y - (l_Rect.top  + (l_Rect.bottom - l_Rect.top)  / 2)) / 10.0f;
-
-                    SetCursorPos(l_Rect.left + (l_Rect.right - l_Rect.left) / 2, l_Rect.top + (l_Rect.bottom - l_Rect.top) / 2);
-                }
-
-                if (GetForegroundWindow() != hWindow)
-                {
-                    Focused = FALSE;
-                    WasAnimating = Animate;
-                    Animate = FALSE;
-                }
-                else
-                {
-                    switch (MoveMode)
-                    {
-                    case 1:
-                        {
-                            if (GetAsyncKeyState(VK_UP)    & 0x8000) { LightPos[1] += 10; }
-                            if (GetAsyncKeyState(VK_DOWN)  & 0x8000) { LightPos[1] -= 10; }
-                            if (GetAsyncKeyState(VK_LEFT)  & 0x8000) { LightPos[0] -= 10; }
-                            if (GetAsyncKeyState(VK_RIGHT) & 0x8000) { LightPos[0] += 10; }
-                            break;
-                        }
-                    case 2:
-                        {
-                            if (GetAsyncKeyState(VK_UP)    & 0x8000) { CubePos01[1] += 10; }
-                            if (GetAsyncKeyState(VK_DOWN)  & 0x8000) { CubePos01[1] -= 10; }
-                            if (GetAsyncKeyState(VK_LEFT)  & 0x8000) { CubePos01[0] -= 10; }
-                            if (GetAsyncKeyState(VK_RIGHT) & 0x8000) { CubePos01[0] += 10; }
-                            break;
-                        }
-                    case 3:
-                        {
-                            if (GetAsyncKeyState(VK_UP)    & 0x8000) { CubePos02[1] += 10; }
-                            if (GetAsyncKeyState(VK_DOWN)  & 0x8000) { CubePos02[1] -= 10; }
-                            if (GetAsyncKeyState(VK_LEFT)  & 0x8000) { CubePos02[0] -= 10; }
-                            if (GetAsyncKeyState(VK_RIGHT) & 0x8000) { CubePos02[0] += 10; }
-                            break;
-                        }
-                    case 4:
-                        {
-                            if (GetAsyncKeyState(VK_UP)    & 0x8000) { PlanePos[1] += 10; }
-                            if (GetAsyncKeyState(VK_DOWN)  & 0x8000) { PlanePos[1] -= 10; }
-                            if (GetAsyncKeyState(VK_LEFT)  & 0x8000) { PlanePos[0] -= 10; }
-                            if (GetAsyncKeyState(VK_RIGHT) & 0x8000) { PlanePos[0] += 10; }
-                            break;
-                        }
-                    case 0:
-                        {
-                            if (GetAsyncKeyState(VK_UP) & 0x8000)
-                            { 
-                                Float3 l_MoveVector = { 0, 0, -1 };
-
-                                RotateVector3(l_MoveVector, l_MoveVector, CameraAngle);
-                                ScaleVector3(l_MoveVector, l_MoveVector, 10);
-                                AddVectors3(CameraPos, CameraPos, l_MoveVector);
-                            }
-                            if (GetAsyncKeyState(VK_DOWN) & 0x8000)
-                            { 
-                                Float3 l_MoveVector = { 0, 0, -1 };
-
-                                RotateVector3(l_MoveVector, l_MoveVector, CameraAngle);
-                                ScaleVector3(l_MoveVector, l_MoveVector, -10);
-                                AddVectors3(CameraPos, CameraPos, l_MoveVector);
-                            }
-                            if (GetAsyncKeyState(VK_LEFT) & 0x8000)
-                            { 
-                                Float3 l_MoveVector = { 1, 0, 0 };
-
-                                RotateVector3(l_MoveVector, l_MoveVector, CameraAngle);
-                                ScaleVector3(l_MoveVector, l_MoveVector, -10);
-                                AddVectors3(CameraPos, CameraPos, l_MoveVector);
-                            }
-                            if (GetAsyncKeyState(VK_RIGHT) & 0x8000) 
-                            {
-                                Float3 l_MoveVector = { 1, 0, 0 };
-
-                                RotateVector3(l_MoveVector, l_MoveVector, CameraAngle);
-                                ScaleVector3(l_MoveVector, l_MoveVector, 10);
-                                AddVectors3(CameraPos, CameraPos, l_MoveVector);
-                            }
-                            break;
-                        }
-                    }
-
-
-                    if (ButtonPressed(VK_ESCAPE)) { DestroyWindow(hWindow); return 0; }
-
-                    if (ButtonPressed(VK_TAB)) { MoveMode++; if (MoveMode > 4) { MoveMode = 0; } }
-
-                    if (ButtonPressed(VK_OEM_3))
-                    {
-                        MouseLook = !MouseLook;
-
-                        if (MouseLook)
-                        { 
-                            GetCursorPos(&OriginalMousePos); 
-
-                            SetCapture(hWindow);
-
-                            RECT l_Rect;
-                            GetWindowRect(hWindow, &l_Rect);
-                            SetCursorPos(l_Rect.left + (l_Rect.right - l_Rect.left) / 2, l_Rect.top + (l_Rect.bottom - l_Rect.top) / 2);
-                            ShowCursor(FALSE);
-                        }
-                        else
-                        { 
-                            ReleaseCapture(); 			
-                            SetCursorPos(OriginalMousePos.x, OriginalMousePos.y); 
-                            ShowCursor(TRUE); 
-                        }
-                    }
-
-                    if (ButtonPressed(VK_SPACE)) { Animate   = !Animate; }
-                    if (ButtonPressed('P'))     { ShowPlane = !ShowPlane; }
-                    if (ButtonPressed('B'))     { ShowBox   = !ShowBox; }
-
-                    if (ButtonPressed(VK_ADD))      { Angle_Iterator[1] += 0.1f; }
-                    if (ButtonPressed(VK_SUBTRACT)) { Angle_Iterator[1] -= 0.1f; }
-
-                    if (ButtonPressed('F')) { if (IsEnabled(SGL_FOG))        { Disable(SGL_FOG); }        else { Enable(SGL_FOG); } }
-                    if (ButtonPressed('T')) { if (IsEnabled(SGL_TEXTURE_2D)) { Disable(SGL_TEXTURE_2D); } else { Enable(SGL_TEXTURE_2D); } }
-                    if (ButtonPressed('L')) { if (IsEnabled(SGL_LIGHTING))   { Disable(SGL_LIGHTING); }   else { Enable(SGL_LIGHTING); } }
-                    if (ButtonPressed('S')) { Int Result; GetIntegerv(SGL_SHADE_MODEL, &Result); if (Result == SGL_FLAT) { ShadeModel(SGL_SMOOTH); } else { ShadeModel(SGL_FLAT); } }
-                }
-
                 if (Animate)
                 {
                     Angle[0] += Angle_Iterator[0];
                     Angle[1] += Angle_Iterator[1];
                 }
 
-                RedrawWindow(hWindow, NULL, NULL, RDW_INVALIDATE);
+                RedrawWindow(hWindow, nullptr, nullptr, RDW_INVALIDATE);
             }
         }
     }
@@ -270,16 +267,16 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX); 
 
-    wcex.style			= CS_HREDRAW | CS_VREDRAW;
+    wcex.style			= CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc	= (WNDPROC)WndProc;
     wcex.cbClsExtra		= 0;
     wcex.cbWndExtra		= 0;
     wcex.hInstance		= hInstance;
     wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TEST));
-    wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
-    wcex.hbrBackground	= NULL;//(HBRUSH)(COLOR_WINDOW+1);
+    wcex.hCursor		= LoadCursor(nullptr, IDC_ARROW);
+    wcex.hbrBackground	= nullptr;//(HBRUSH)(COLOR_WINDOW+1);
     wcex.lpszClassName	= TEXT("ShadowGLTestSession");
-    wcex.hIconSm		= NULL;//LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    wcex.hIconSm		= nullptr;//LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
     wcex.lpszMenuName   = MAKEINTRESOURCE(IDC_TEST);
 
     return RegisterClassEx(&wcex);
@@ -291,8 +288,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     MyRegisterClass(hInstance);
 
-    hWindow = CreateWindowEx(0, TEXT("ShadowGLTestSession"), TEXT("ShadowGL Test Session"), WS_OVERLAPPEDWINDOW | WS_SYSMENU, 100, 100, 640, 500, NULL, NULL, hInstance, NULL);
-    if (!hWindow) { return FALSE; }
+    hWindow = CreateWindowEx(WS_EX_APPWINDOW, TEXT("ShadowGLTestSession"), TEXT("ShadowGL Test Session"), WS_OVERLAPPEDWINDOW | WS_SYSMENU, 100, 100, 640, 500, nullptr, nullptr, hInstance, nullptr);
+    if (!hWindow) { return false; }
         
     TimerInitialize();
 
@@ -307,7 +304,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     SetVector4(LightPos, 250, 250, 100, 1); 
 
-    LightModeli(SGL_LIGHT_MODEL_LOCAL_VIEWER, TRUE);
+    LightModeli(SGL_LIGHT_MODEL_LOCAL_VIEWER, true);
 
     float tmp[4];
     
@@ -353,8 +350,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     SetVector3(CameraPos,   0, 0, 600);
     SetVector3(CameraAngle, 0, 0,   0);
-
-    ShadeModel(SGL_SMOOTH);
 
     Fogfv(SGL_FOG_COLOR, &tmp[0]);
     Fogf(SGL_FOG_DENSITY, 1);
@@ -436,7 +431,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     ReleaseDC(hWindow, hDC);
 
-    return TRUE;
+    SetFocus(hWindow);
+
+    return true;
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -515,9 +512,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
          
     case WM_SETFOCUS:
         {
-            if (WasAnimating) { Animate = TRUE; }
-            Focused = TRUE;
-            SetFocus(NULL);
+            if (WasAnimating) { Animate = true; }
+            Focused = true;
+            SetFocus(nullptr);
             return 0;
         }
 
@@ -529,7 +526,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         {
             DeleteContext(hRC);
-            hRC = NULL;
+            hRC = nullptr;
 
             PostQuitMessage(0);
             break;
@@ -539,16 +536,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (wParam == SC_MINIMIZE)
             {
-                Minimized = TRUE;
+                Minimized = true;
             }
 
             if (wParam == SC_RESTORE)
             {
-                Minimized = FALSE;
+                Minimized = false;
             }
-
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
+
     case WM_PAINT:
         {
             static PAINTSTRUCT ps;
@@ -561,10 +558,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
-
+        
     default: { return DefWindowProc(hWnd, message, wParam, lParam); }
     }
-    return 0;
+
+    return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
 //Message handler for about box.
@@ -581,7 +579,7 @@ BOOL CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
             SetDlgItemText(hDlg, IDC_VERSION, CString((LPSTR)Version).Value());
 
-            return TRUE;
+            return true;
         }
 
     case WM_COMMAND:
@@ -589,13 +587,13 @@ BOOL CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) 
             {
                 EndDialog(hDlg, LOWORD(wParam));
-                return TRUE;
+                return true;
             }
         
             break;
         }
     }
-    return FALSE;
+    return false;
 }
 
 //Message handler for Controls box.
@@ -610,13 +608,13 @@ BOOL CALLBACK Controls(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) 
             {
                 EndDialog(hDlg, LOWORD(wParam));
-                return TRUE;
+                return true;
             }
         
             break;
         }
     }
-    return FALSE;
+    return false;
 }
 
 //Message handler for about box.
@@ -633,18 +631,18 @@ BOOL CALLBACK FogOptions(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             Int		Int01;
 
             GetFloatv(SGL_FOG_COLOR, &Float401[0]);
-            SetDlgItemInt(hDlg, IDC_COLOR_R, (UINT)(255 * Float401[0]), FALSE);
-            SetDlgItemInt(hDlg, IDC_COLOR_G, (UINT)(255 * Float401[1]), FALSE);
-            SetDlgItemInt(hDlg, IDC_COLOR_B, (UINT)(255 * Float401[2]), FALSE);
+            SetDlgItemInt(hDlg, IDC_COLOR_R, (UINT)(255 * Float401[0]), false);
+            SetDlgItemInt(hDlg, IDC_COLOR_G, (UINT)(255 * Float401[1]), false);
+            SetDlgItemInt(hDlg, IDC_COLOR_B, (UINT)(255 * Float401[2]), false);
 
             GetFloatv(SGL_FOG_DENSITY, &Float01);
-            SetDlgItemInt(hDlg, IDC_FOG_DENSITY, (UINT)(Float01 * 100), FALSE);
+            SetDlgItemInt(hDlg, IDC_FOG_DENSITY, (UINT)(Float01 * 100), false);
 
             GetFloatv(SGL_FOG_START, &Float01);
-            SetDlgItemInt(hDlg, IDC_FOG_START, (UINT)Float01, FALSE);
+            SetDlgItemInt(hDlg, IDC_FOG_START, (UINT)Float01, false);
 
             GetFloatv(SGL_FOG_END, &Float01);
-            SetDlgItemInt(hDlg, IDC_FOG_END, (UINT)Float01, FALSE);
+            SetDlgItemInt(hDlg, IDC_FOG_END, (UINT)Float01, false);
 
             GetIntegerv(SGL_FOG_MODE, &Int01);
 
@@ -663,7 +661,7 @@ BOOL CALLBACK FogOptions(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
                 CheckRadioButton(hDlg, IDC_LINEAR, IDC_EXP2, IDC_EXP2);
             }
 
-            return TRUE;
+            return true;
         }
 
     case WM_COMMAND:
@@ -679,7 +677,7 @@ BOOL CALLBACK FogOptions(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) 
             {
                 EndDialog(hDlg, LOWORD(wParam));
-                return TRUE;
+                return true;
             }
         
             break;
@@ -690,19 +688,19 @@ BOOL CALLBACK FogOptions(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             Float4 Float401;
             Float	Float01;
 
-            Float401[0] = GetDlgItemInt(hDlg, IDC_COLOR_R, NULL, FALSE) / 255.0f;
-            Float401[1] = GetDlgItemInt(hDlg, IDC_COLOR_G, NULL, FALSE) / 255.0f;
-            Float401[2] = GetDlgItemInt(hDlg, IDC_COLOR_B, NULL, FALSE) / 255.0f;
+            Float401[0] = GetDlgItemInt(hDlg, IDC_COLOR_R, nullptr, false) / 255.0f;
+            Float401[1] = GetDlgItemInt(hDlg, IDC_COLOR_G, nullptr, false) / 255.0f;
+            Float401[2] = GetDlgItemInt(hDlg, IDC_COLOR_B, nullptr, false) / 255.0f;
             Float401[3] = 1;
             Fogfv(SGL_FOG_COLOR, &Float401[0]);
 
-            Float01 = GetDlgItemInt(hDlg, IDC_FOG_DENSITY, NULL, FALSE) / 100.0f;
+            Float01 = GetDlgItemInt(hDlg, IDC_FOG_DENSITY, nullptr, false) / 100.0f;
             Fogf(SGL_FOG_DENSITY, Float01);
 
-            Float01 = (Float)GetDlgItemInt(hDlg, IDC_FOG_START, NULL, FALSE);
+            Float01 = (Float)GetDlgItemInt(hDlg, IDC_FOG_START, nullptr, false);
             Fogf(SGL_FOG_START, Float01 );
 
-            Float01 = (Float)GetDlgItemInt(hDlg, IDC_FOG_END, NULL, FALSE);
+            Float01 = (Float)GetDlgItemInt(hDlg, IDC_FOG_END, nullptr, false);
             Fogf(SGL_FOG_END, Float01);
 
             if (IsDlgButtonChecked(hDlg, IDC_LINEAR) == BST_CHECKED)
@@ -724,7 +722,7 @@ BOOL CALLBACK FogOptions(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         }
 
     }
-    return FALSE;
+    return false;
 }
 
 void DrawScene(HDC hDC)

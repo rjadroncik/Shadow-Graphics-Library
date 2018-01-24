@@ -45,8 +45,8 @@ BEGIN
     LTEXT           "Movement :",IDC_STATIC,10,39,38,8
     LTEXT           "Up",IDC_STATIC,10,70,27,8
     LTEXT           "Up, Forward",IDC_STATIC,40,70,40,8
-    LTEXT           "Down",IDC_STATIC,10,79,27,8
-    LTEXT           "Down, Back",IDC_STATIC,40,79,40,8
+    LTEXT           "Down",IDC_STATIC,10,80,27,8
+    LTEXT           "Down, Back",IDC_STATIC,40,80,40,8
     LTEXT           "Keypad +",IDC_STATIC,130,15,34,8
     LTEXT           "Increase Cube Spin",IDC_STATIC,164,15,63,8
     LTEXT           "Keypad -",IDC_STATIC,130,25,30,8
@@ -57,12 +57,10 @@ BEGIN
     LTEXT           "Toggle Texturing",IDC_STATIC,164,49,54,8
     LTEXT           "L",IDC_STATIC,130,60,8,8
     LTEXT           "Toggle Lighting/Colouring",IDC_STATIC,164,60,82,8
-    LTEXT           "S",IDC_STATIC,130,70,8,8
-    LTEXT           "Toggle Smooth Shading*",IDC_STATIC,164,70,80,8
-    LTEXT           "B",IDC_STATIC,130,79,8,8
-    LTEXT           "Show/Hide Boxes",IDC_STATIC,164,79,58,8
-    LTEXT           "P",IDC_STATIC,130,89,8,8
-    LTEXT           "Show/Hide Plane",IDC_STATIC,164,89,57,8
+    LTEXT           "B",IDC_STATIC,130,70,8,8
+    LTEXT           "Show/Hide Boxes",IDC_STATIC,164,70,58,8
+    LTEXT           "P",IDC_STATIC,130,80,8,8
+    LTEXT           "Show/Hide Plane",IDC_STATIC,164,80,57,8
     LTEXT           "Tab",IDC_STATIC,10,100,14,8
     LTEXT           "Toggle : Camera, Cube,",IDC_STATIC,40,100,76,8
     LTEXT           "Plane or Light",IDC_STATIC,40,110,44,8
@@ -151,6 +149,17 @@ BEGIN
     END
 END
 #endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_CONTROLS AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
 
 #endif    // Slovak (Slovakia) resources
 /////////////////////////////////////////////////////////////////////////////

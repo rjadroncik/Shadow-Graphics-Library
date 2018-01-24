@@ -9,6 +9,7 @@ using namespace SCFMathematics;
 
 namespace ShadowGLPrivate
 {
+    const   UByte   TRIANLGE_VERTICES           = 3;
     const	UByte	MAX_PRIMITIVE_VERTICES		= 3;
 
     const	UByte	MAX_MODELVIEW_MATRICES		= 32;
@@ -80,17 +81,18 @@ namespace ShadowGLPrivate
 
         struct PrimState
         {
-        //Current Primitive State
-            UByte   VertexCount;
+            //Current Primitive State
+            UByte VerticesSubmitted;
+
             tVertex Vertex[MAX_PRIMITIVE_VERTICES];
 
             UByte ClipArray;
             UByte ClipCount;
 
+            //We use 2 clip arrays as we iteratively clip the primitive one plane at a time
             tVertex ClipVertex[2][3*MAX_PRIMITIVE_VERTICES];
 
-            UByte MaxVertices;
-            UInt  Type;
+            UInt Type;
 
             Boolean Building;	
 
@@ -200,7 +202,6 @@ namespace ShadowGLPrivate
 
         struct SEnable
         {
-            Boolean SmoothShading;
             Boolean Lighting;
             Boolean Normalize;
             Boolean LocalViewer;
@@ -338,8 +339,6 @@ namespace ShadowGLPrivate
 
 namespace ShadowGL
 {
-    SHADOWGL_API	void ShadeModel(Enum mode);
-
     SHADOWGL_API	void Enable(Enum cap);
     SHADOWGL_API	void Disable(Enum cap);
 

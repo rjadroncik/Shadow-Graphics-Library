@@ -10,8 +10,6 @@ using namespace SCFMathematics;
 #define	SGL_POINTS							10
 #define	SGL_LINES							11
 #define	SGL_TRIANGLES						12
-#define	SGL_QUADS							13
-#define	SGL_POLYGON							14
 
 //MatrixMode() argument definitions
 #define	SGL_MODELVIEW						20
@@ -88,10 +86,6 @@ using namespace SCFMathematics;
 #define	SGL_EMISSION						2220 
 #define	SGL_SHININESS 						2221 
 #define	SGL_AMBIENT_AND_DIFFUSE				2222 
-
-//ShadeModel() argument definitions
-#define	SGL_FLAT							2100 
-#define	SGL_SMOOTH							2101 
 
 //Enable()/Disable() argument definitions
 #define	SGL_LIGHTING						3000 

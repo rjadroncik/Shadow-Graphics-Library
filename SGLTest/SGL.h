@@ -65,7 +65,6 @@ namespace ShadowGL
 #define	SGL_TEXTURE_ENV_COLOR				1026
 #define	SGL_TEXTURE_ENV_MODE				1027
 
-#define	SGL_SHADE_MODEL						1028
 #define	SGL_CULL_FACE_MODE					1029
 #define	SGL_FRONT_FACE						1030
 
@@ -112,10 +111,6 @@ namespace ShadowGL
 #define	SGL_EMISSION						2220 
 #define	SGL_SHININESS 						2221 
 #define	SGL_AMBIENT_AND_DIFFUSE				2222 
-
-//ShadeModel() Argument Definitions
-#define	SGL_FLAT							2100 
-#define	SGL_SMOOTH							2101 
 
 //Enable()/Disable() Argument Definitions
 #define	SGL_LIGHTING						3000 
@@ -257,8 +252,6 @@ namespace ShadowGL
 
 	void Normal3f(Float x, Float y, Float z);
 	void TexCoord2f(Float x, Float y);
-
-	void ShadeModel(Enum mode);
 
 	void Enable(Enum cap);
 	void Disable(Enum cap);
