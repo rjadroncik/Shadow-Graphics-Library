@@ -1,7 +1,6 @@
 #include "StdAfx.h"
 #include "resource.h"
 #include "SGLTest.h"
-#include "SGL.h"
 
 #include <SCFMathematics.h>
 #include <SCFTimer.h>
@@ -211,6 +210,14 @@ void ProcessKeyboardInput()
         if (ButtonPressed('F')) { if (IsEnabled(SGL_FOG)) { Disable(SGL_FOG); } else { Enable(SGL_FOG); } }
         if (ButtonPressed('T')) { if (IsEnabled(SGL_TEXTURE_2D)) { Disable(SGL_TEXTURE_2D); } else { Enable(SGL_TEXTURE_2D); } }
         if (ButtonPressed('L')) { if (IsEnabled(SGL_LIGHTING)) { Disable(SGL_LIGHTING); } else { Enable(SGL_LIGHTING); } }
+        
+        if (ButtonPressed('R')) 
+        {
+            Int filter;
+            GetTexParameteriv(SGL_TEXTURE_2D, SGL_TEXTURE_MIN_FILTER, &filter);
+
+            if (filter == SGL_LINEAR) { TexParameteri(SGL_TEXTURE_2D, SGL_TEXTURE_MIN_FILTER, SGL_NEAREST); } else { TexParameteri(SGL_TEXTURE_2D, SGL_TEXTURE_MIN_FILTER, SGL_LINEAR); }
+        }
     }
 }
 
@@ -378,6 +385,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     tmp[3] = 1.0f;  
     Materialfv(SGL_FRONT, SGL_EMISSION, &tmp[0]);*/
 
+    TexParameteri(SGL_TEXTURE_2D, SGL_TEXTURE_MIN_FILTER, SGL_LINEAR);
     GenTextures(16, &TexName[0]);
 
     CImage* pPicture = CImage::Load(TEXT("Data\\AMD 64.jpg"), 0);

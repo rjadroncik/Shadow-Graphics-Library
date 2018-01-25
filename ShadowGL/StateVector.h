@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Types.h"
+#include "ShadowGL.h"
 #include <SCFMathematics.h>
 
 typedef HANDLE HDRAWDIB;
@@ -71,7 +71,7 @@ namespace ShadowGLPrivate
 
         struct VertexState
         {
-        //Current tVertex State
+            //Current tVertex State
             Float3 Normal;
             Float4 Color;
 
@@ -100,7 +100,7 @@ namespace ShadowGLPrivate
 
         struct ViewState
         {
-        //Current View State
+            //Current View State
             Float4 ClipPlane[6];
 
             Int2 Origin;
@@ -120,7 +120,7 @@ namespace ShadowGLPrivate
 
         struct MatrixState
         {
-        //Current Matrix State
+            //Current Matrix State
             Enum Mode;
             
             Matrix4 ModelView       [MAX_MODELVIEW_MATRICES];
@@ -136,7 +136,7 @@ namespace ShadowGLPrivate
 
         struct MaterialState
         {
-        //Current tVertex State
+            //Current tVertex State
             Float4 Ambient;
             Float4 Diffuse;
             Float4 Specular;
@@ -148,7 +148,7 @@ namespace ShadowGLPrivate
 
         struct FogState
         {
-        //Current Fog State
+            //Current Fog State
             Enum Mode;
 
             Float Start;
@@ -161,7 +161,6 @@ namespace ShadowGLPrivate
 
         struct PixelTransferState
         {
-        //Current Fog State
             Float Scale_Red;
             Float Scale_Green;
             Float Scale_Blue;
@@ -214,12 +213,23 @@ namespace ShadowGLPrivate
 
         Float4 Ambient;
 
-        Float4 TexEnvColor;
-        Enum TexEnvMode;
+        struct STexture
+        {
+            Float4 EnvColor;
+            Enum EnvMode;
 
-        Int TexCurrent1D;
-        Int TexCurrent2D;
-        Boolean TexNameUsed[MAX_TEXTURES];
+            Int Current1D;
+            Int Current2D;
+
+            Boolean NameUsed[MAX_TEXTURES];
+
+            Enum MagFilter = SGL_NEAREST;
+            Enum MinFilter = SGL_NEAREST;
+
+            Enum WrapS = SGL_REPEAT;
+            Enum WrapT = SGL_REPEAT;
+
+        } Texture;
 
         Enum CullStyle;
         Enum FrontFace;
@@ -316,6 +326,20 @@ namespace ShadowGLPrivate
 
         struct SCurTriangleState
         {
+            Float Offset_13 = 0;
+            Float Offset_12 = 0;
+            Float Offset_23 = 0;
+
+            Float Coefficient_13 = 0;
+            Float Coefficient_12 = 0;
+            Float Coefficient_23 = 0;
+
+            Float TriangleArea = 0;
+
+            UByte *pTexture = nullptr;
+
+            SizeI TextureWidth = 0;
+            SizeI TextureHeight = 0;
 
         } Triangle;
 
@@ -335,54 +359,4 @@ namespace ShadowGLPrivate
         UByte V2;
         UByte V3;
     };
-}
-
-namespace ShadowGL
-{
-    SHADOWGL_API	void Enable(Enum cap);
-    SHADOWGL_API	void Disable(Enum cap);
-
-    SHADOWGL_API	Boolean IsEnabled(Enum cap);
-
-    SHADOWGL_API	void Lightf(Enum light, Enum pname, Float param);
-    SHADOWGL_API	void Lightfv(Enum light, Enum pname, const Float *params);
-
-    SHADOWGL_API	void LightModeli(Enum pname, Int param);
-    SHADOWGL_API	void LightModelfv(Enum pname, const Float *params);
-
-    SHADOWGL_API	void GetBooleanv(Enum pname, Boolean * params);
-    SHADOWGL_API	void GetDoublev(Enum pname, Double * params);
-    SHADOWGL_API	void GetFloatv(Enum pname, Float * params);
-    SHADOWGL_API	void GetIntegerv(Enum pname, Int * params);
-
-    SHADOWGL_API	void GetLightfv(Enum light, Enum pname, Float * params);
-
-    SHADOWGL_API	const UByte* GetString(Enum name);
-
-    SHADOWGL_API	void Materialfv(Enum face, Enum pname, const Float *params);
-
-    SHADOWGL_API	void FrontFace(Enum dir);
-    SHADOWGL_API	void CullFace(Enum mode);
-
-    SHADOWGL_API	void Fogf(Enum pname, Float param);
-    SHADOWGL_API	void Fogi(Enum pname, Int param);
-    SHADOWGL_API	void Fogfv(Enum pname, const Float *params);
-
-    SHADOWGL_API	void TexImage1D(Enum target, Int level, Int components, SizeI width, Int border, Enum format, Enum type, const void *pixels);
-    SHADOWGL_API	void TexImage2D(Enum target, Int level, Int components, SizeI width, SizeI height, Int border, Enum format, Enum type, const void *pixels);
-
-    SHADOWGL_API	void TexEnvf(Enum target, Enum pname, Float param);
-    SHADOWGL_API	void TexEnvi(Enum target, Enum pname, Float param);
-
-    SHADOWGL_API	void TexParameteri(Enum target, Enum pname, Int param);
-
-    SHADOWGL_API	void GenTextures(SizeI n, Int * textures);
-    SHADOWGL_API	void DeleteTextures(SizeI n, const Int * textures);
-
-    SHADOWGL_API	void BindTexture(Enum target, Int texture);
-
-    SHADOWGL_API	void PixelTransferf(Enum pname, Float param);
-
-    SHADOWGL_API    void PushAttrib(Bitfield mask);
-    SHADOWGL_API    void PopAttrib();
 }

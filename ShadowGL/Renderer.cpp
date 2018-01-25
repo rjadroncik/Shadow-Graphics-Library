@@ -10,21 +10,6 @@ namespace ShadowGLPrivate
 {
 	SRendererState RS;
 
-	Float Offset_13 = 0;
-	Float Offset_12 = 0;
-	Float Offset_23 = 0;
-
-	Float Coefficient_13 = 0;
-	Float Coefficient_12 = 0;
-	Float Coefficient_23 = 0;
-
-	Float TriangleArea = 0;
-
-	UByte *pTexture = nullptr;
-
-	SizeI TextureWidth  = 0;
-	SizeI TextureHeight = 0;
-
     //Triangle area multipleid by two (simply by removing the division by 2 from the regular formula)
 	inline float TriangleArea2x2(_IN Float2& rVertex1, _IN Float2& rVertex2, _IN Float2& rVertex3)
 	{
@@ -256,9 +241,9 @@ namespace ShadowGLPrivate
 
 	UByte ClipPolygonAtPlane(tVertex* inputVertex, _IN UByte count, const Float* clipPlane, tVertex* outputVertex) 
 	{
-		UByte	v1, v2;
-		UByte	VertexIndex = 0;
-		Float	t = 0;
+		UByte v1, v2;
+		UByte VertexIndex = 0;
+		Float t = 0;
 
 		for (UByte i = 0; i < count; i++)
 		{
@@ -565,8 +550,8 @@ namespace ShadowGLPrivate
 		{
 			if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
 			{
-				RS.Line[0].Left.X  = - Coefficient_13 * ((Float)RS.Line[0].Index + 0.5f) - Offset_13;
-				RS.Line[0].Right.X = - Coefficient_12 * ((Float)RS.Line[0].Index + 0.5f) - Offset_12;
+				RS.Line[0].Left.X  = - RS.Triangle.Coefficient_13 * ((Float)RS.Line[0].Index + 0.5f) - RS.Triangle.Offset_13;
+				RS.Line[0].Right.X = - RS.Triangle.Coefficient_12 * ((Float)RS.Line[0].Index + 0.5f) - RS.Triangle.Offset_12;
 			}
 			else { RS.Line[0].Left.X = vertex1->ViewCoord[0]; RS.Line[0].Right.X = vertex2->ViewCoord[0]; }
 
@@ -581,8 +566,8 @@ namespace ShadowGLPrivate
 			//Compute left & right coordinate values
 			if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
 			{
-				RS.Line[1].Left.X  = - Coefficient_13 * ((Float)RS.Line[1].Index + 0.5f) - Offset_13;
-				RS.Line[1].Right.X = - Coefficient_23 * ((Float)RS.Line[1].Index + 0.5f) - Offset_23;
+				RS.Line[1].Left.X  = - RS.Triangle.Coefficient_13 * ((Float)RS.Line[1].Index + 0.5f) - RS.Triangle.Offset_13;
+				RS.Line[1].Right.X = - RS.Triangle.Coefficient_23 * ((Float)RS.Line[1].Index + 0.5f) - RS.Triangle.Offset_23;
 			}
 			else {	RS.Line[1].Left.X = vertex2->ViewCoord[0]; RS.Line[1].Right.X = vertex3->ViewCoord[0]; }
 
@@ -596,8 +581,8 @@ namespace ShadowGLPrivate
 		{
 			if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
 			{
-				RS.Line[0].Right.X = - Coefficient_13 * ((Float)RS.Line[0].Index + 0.5f) - Offset_13;
-				RS.Line[0].Left.X  = - Coefficient_12 * ((Float)RS.Line[0].Index + 0.5f) - Offset_12;
+				RS.Line[0].Right.X = -RS.Triangle.Coefficient_13 * ((Float)RS.Line[0].Index + 0.5f) - RS.Triangle.Offset_13;
+				RS.Line[0].Left.X  = -RS.Triangle.Coefficient_12 * ((Float)RS.Line[0].Index + 0.5f) - RS.Triangle.Offset_12;
 			}
 			else { RS.Line[0].Right.X = vertex1->ViewCoord[0]; RS.Line[0].Left.X = vertex2->ViewCoord[0]; }
 
@@ -611,8 +596,8 @@ namespace ShadowGLPrivate
 		{
 			if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
 			{
-				RS.Line[1].Right.X = - Coefficient_13 * ((Float)RS.Line[1].Index + 0.5f) - Offset_13;
-				RS.Line[1].Left.X  = - Coefficient_23 * ((Float)RS.Line[1].Index + 0.5f) - Offset_23;
+				RS.Line[1].Right.X = -RS.Triangle.Coefficient_13 * ((Float)RS.Line[1].Index + 0.5f) - RS.Triangle.Offset_13;
+				RS.Line[1].Left.X  = -RS.Triangle.Coefficient_23 * ((Float)RS.Line[1].Index + 0.5f) - RS.Triangle.Offset_23;
 			}
 			else { RS.Line[1].Right.X = vertex2->ViewCoord[0]; RS.Line[1].Left.X = vertex3->ViewCoord[0]; }
 
@@ -632,28 +617,28 @@ namespace ShadowGLPrivate
 
 		if (RC.Enable.Texturing2D)
 		{
-			pTexture              = Texture[RC.TexCurrent2D].pData;
-			TextureWidth          = Texture[RC.TexCurrent2D].Width;
-			TextureHeight         = Texture[RC.TexCurrent2D].Height;
-			RS.Texture.Components = Texture[RC.TexCurrent2D].Components;
+            RS.Triangle.pTexture              = Texture[RC.Texture.Current2D].pData;
+            RS.Triangle.TextureWidth          = Texture[RC.Texture.Current2D].Width;
+            RS.Triangle.TextureHeight         = Texture[RC.Texture.Current2D].Height;
+			RS.Texture.Components = Texture[RC.Texture.Current2D].Components;
 		}
 
-		TriangleArea = TriangleArea2x2((Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord);
+        RS.Triangle.TriangleArea = TriangleArea2x2((Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord);
 
 		//Compute coefficients
-		if ((vertex3->ViewCoord[1] - vertex1->ViewCoord[1]) != 0) { Coefficient_13 = (vertex1->ViewCoord[0] - vertex3->ViewCoord[0]) / (vertex3->ViewCoord[1] - vertex1->ViewCoord[1]); }
-		else { Coefficient_13 = 0; }
+		if ((vertex3->ViewCoord[1] - vertex1->ViewCoord[1]) != 0) { RS.Triangle.Coefficient_13 = (vertex1->ViewCoord[0] - vertex3->ViewCoord[0]) / (vertex3->ViewCoord[1] - vertex1->ViewCoord[1]); }
+		else { RS.Triangle.Coefficient_13 = 0; }
 
-		if ((vertex2->ViewCoord[1] - vertex1->ViewCoord[1]) != 0) { Coefficient_12 = (vertex1->ViewCoord[0] - vertex2->ViewCoord[0]) / (vertex2->ViewCoord[1] - vertex1->ViewCoord[1]); }
-		else { Coefficient_12 = 0; }
+		if ((vertex2->ViewCoord[1] - vertex1->ViewCoord[1]) != 0) { RS.Triangle.Coefficient_12 = (vertex1->ViewCoord[0] - vertex2->ViewCoord[0]) / (vertex2->ViewCoord[1] - vertex1->ViewCoord[1]); }
+		else { RS.Triangle.Coefficient_12 = 0; }
 
-		if ((vertex3->ViewCoord[1] - vertex2->ViewCoord[1]) != 0) { Coefficient_23 = (vertex2->ViewCoord[0] - vertex3->ViewCoord[0]) / (vertex3->ViewCoord[1] - vertex2->ViewCoord[1]); }
-		else { Coefficient_23 = 0; }
+		if ((vertex3->ViewCoord[1] - vertex2->ViewCoord[1]) != 0) { RS.Triangle.Coefficient_23 = (vertex2->ViewCoord[0] - vertex3->ViewCoord[0]) / (vertex3->ViewCoord[1] - vertex2->ViewCoord[1]); }
+		else { RS.Triangle.Coefficient_23 = 0; }
 
 		//Compute offsets
-		Offset_13 = - Coefficient_13 * vertex1->ViewCoord[1] - vertex1->ViewCoord[0];
-		Offset_12 = - Coefficient_12 * vertex1->ViewCoord[1] - vertex1->ViewCoord[0];
-		Offset_23 = - Coefficient_23 * vertex2->ViewCoord[1] - vertex2->ViewCoord[0];
+        RS.Triangle.Offset_13 = -RS.Triangle.Coefficient_13 * vertex1->ViewCoord[1] - vertex1->ViewCoord[0];
+        RS.Triangle.Offset_12 = -RS.Triangle.Coefficient_12 * vertex1->ViewCoord[1] - vertex1->ViewCoord[0];
+        RS.Triangle.Offset_23 = -RS.Triangle.Coefficient_23 * vertex2->ViewCoord[1] - vertex2->ViewCoord[0];
 
 		//Apply left-top rasterization rules to vertex values
 		if (vertex1->ViewCoord[1] > ((Int)vertex1->ViewCoord[1] + 0.5f)) { RS.Vertex[0].Y = (Int)vertex1->ViewCoord[1] + 1; }
@@ -665,7 +650,7 @@ namespace ShadowGLPrivate
 		if (vertex3->ViewCoord[1] <= ((Int)vertex3->ViewCoord[1] + 0.5f)) { RS.Vertex[2].Y = (Int)vertex3->ViewCoord[1] - 1; }
 		else { RS.Vertex[2].Y = (Int)vertex3->ViewCoord[1]; }
 
-		if (vertex2->ViewCoord[0] >= (- Coefficient_13 * vertex2->ViewCoord[1] - Offset_13)) 
+		if (vertex2->ViewCoord[0] >= (-RS.Triangle.Coefficient_13 * vertex2->ViewCoord[1] - RS.Triangle.Offset_13))
 		{
             RasterizeTopPartOfTriangleWithMiddleVertexRight(vertex1, vertex2, vertex3);
             RasterizeBottomPartOfTriangleWithMiddleVertexRight(vertex1, vertex2, vertex3);
@@ -690,20 +675,20 @@ namespace ShadowGLPrivate
 		Float2 positionLeft;
 		Float2 positionRight;
 
-		//Compute barycentric coords
 		SetVector2(positionLeft, (Float)X_LeftClamped  + 0.5f, (Float)line.Index + 0.5f);
 		SetVector2(positionRight, (Float)X_RightClamped + 0.5f, (Float)line.Index + 0.5f);
 
+        //Compute barycentric coords
         Float3 B_LeftCoord;
         Float3 B_RightCoord;
 
-        B_LeftCoord[0] = TriangleArea2x2(positionLeft, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / TriangleArea;
-		B_LeftCoord[1] = TriangleArea2x2(positionLeft, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / TriangleArea;
-		B_LeftCoord[2] = TriangleArea2x2(positionLeft, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / TriangleArea;
+        B_LeftCoord[0] = TriangleArea2x2(positionLeft, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / RS.Triangle.TriangleArea;
+		B_LeftCoord[1] = TriangleArea2x2(positionLeft, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / RS.Triangle.TriangleArea;
+		B_LeftCoord[2] = TriangleArea2x2(positionLeft, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / RS.Triangle.TriangleArea;
 
-		B_RightCoord[0] = TriangleArea2x2(positionRight, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / TriangleArea;
-		B_RightCoord[1] = TriangleArea2x2(positionRight, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / TriangleArea;
-		B_RightCoord[2] = TriangleArea2x2(positionRight, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / TriangleArea;
+		B_RightCoord[0] = TriangleArea2x2(positionRight, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / RS.Triangle.TriangleArea;
+		B_RightCoord[1] = TriangleArea2x2(positionRight, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / RS.Triangle.TriangleArea;
+		B_RightCoord[2] = TriangleArea2x2(positionRight, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / RS.Triangle.TriangleArea;
 
 		//Prepare z-buffer values
 		line.Left.Z    = B_LeftCoord[0]  * vertex1->ViewCoord[2] + B_LeftCoord[1]  * vertex2->ViewCoord[2] + B_LeftCoord[2]  * vertex3->ViewCoord[2];
@@ -757,10 +742,7 @@ namespace ShadowGLPrivate
 				line.Current.Fog = line.Left.Fog;
                 line.Iterator.Fog = (line.Right.Fog - line.Left.Fog) / line.Length;
             }
-		}
 
-		if (RC.Enable.Texturing2D)
-		{
 			line.Iterator.Numerator.S   = (line.Right.Numerator.S   - line.Left.Numerator.S)   / line.Length;
 			line.Iterator.Denominator.S = (line.Right.Denominator.S - line.Left.Denominator.S) / line.Length;
 				
@@ -785,10 +767,10 @@ namespace ShadowGLPrivate
                 if (line.Current.Z < Buffer.Depth[pixel.Index])
                 {
 				    //Use linear filtering 
-				    if (true)
+				    if (RC.Texture.MinFilter == SGL_LINEAR)
 				    {
-					    float uMinusHalf = TextureWidth * line.Current.S - 0.5f;
-					    float vMinusHalf = TextureHeight * line.Current.T - 0.5f;
+					    float uMinusHalf = RS.Triangle.TextureWidth * line.Current.S - 0.5f;
+					    float vMinusHalf = RS.Triangle.TextureHeight * line.Current.T - 0.5f;
 
 					    if (uMinusHalf < 0) { uMinusHalf = 0; }
 					    if (vMinusHalf < 0) { vMinusHalf = 0; }
@@ -798,16 +780,16 @@ namespace ShadowGLPrivate
 					    Int i1 = i0 + 1;
 					    Int j1 = j0 + 1;
 
-					    if (i0 == TextureWidth)  { i0--; }
-					    if (j0 == TextureHeight) { j0--; }
-					    if (i1 == TextureWidth)  { i1--; }
-					    if (j1 == TextureHeight) { j1--; }
+					    if (i0 == RS.Triangle.TextureWidth)  { i0--; }
+					    if (j0 == RS.Triangle.TextureHeight) { j0--; }
+					    if (i1 == RS.Triangle.TextureWidth)  { i1--; }
+					    if (j1 == RS.Triangle.TextureHeight) { j1--; }
 
 					    //Fetch 4 texels
-					    UINT Texel00 = *(UINT*)(&pTexture[(j0 * TextureWidth + i0) * RS.Texture.Components]);
-					    UINT Texel01 = *(UINT*)(&pTexture[(j0 * TextureWidth + i1) * RS.Texture.Components]);
-					    UINT Texel10 = *(UINT*)(&pTexture[(j1 * TextureWidth + i0) * RS.Texture.Components]);
-					    UINT Texel11 = *(UINT*)(&pTexture[(j1 * TextureWidth + i1) * RS.Texture.Components]);
+					    UINT Texel00 = *(UINT*)(&RS.Triangle.pTexture[(j0 * RS.Triangle.TextureWidth + i0) * RS.Texture.Components]);
+					    UINT Texel01 = *(UINT*)(&RS.Triangle.pTexture[(j0 * RS.Triangle.TextureWidth + i1) * RS.Texture.Components]);
+					    UINT Texel10 = *(UINT*)(&RS.Triangle.pTexture[(j1 * RS.Triangle.TextureWidth + i0) * RS.Texture.Components]);
+					    UINT Texel11 = *(UINT*)(&RS.Triangle.pTexture[(j1 * RS.Triangle.TextureWidth + i1) * RS.Texture.Components]);
 
 					    float alpha = uMinusHalf - (Int)uMinusHalf;
 					    float beta  = vMinusHalf - (Int)vMinusHalf;
@@ -821,7 +803,9 @@ namespace ShadowGLPrivate
 				    else
 				    {
 					    //Fetch texel
-					    Texel = *(UINT*)(&pTexture[((Int)(TextureHeight * line.Current.T) * TextureWidth + (Int)(TextureWidth * line.Current.S)) * RS.Texture.Components]);
+					    Texel = *(UINT*)(&RS.Triangle.pTexture[
+                            ((Int)(RS.Triangle.TextureHeight * line.Current.T) * RS.Triangle.TextureWidth + (Int)(RS.Triangle.TextureWidth * line.Current.S))
+                                * RS.Texture.Components]);
 
                         //Implicitly use SGL_MODULATE as texture environment mode
                         pixel.Color[0] = line.Current.Color[0] * ((BYTE)(Texel)       * 0.00392156862745098f);

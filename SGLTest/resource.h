@@ -14,7 +14,6 @@
 #define IDB_NOT_MEANT                   134
 #define IDD_CONTROLS                    139
 #define IDD_OPTIONS_FOG                 146
-#define IDB_AUTHOR                      147
 #define IDI_ICON1                       148
 #define IDI_TEST                        148
 #define IDC_VERSION                     1000

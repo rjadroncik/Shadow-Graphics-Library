@@ -1,8 +1,6 @@
 #pragma once
 
-#include "StateVector.h"
-
-using namespace SCFMathematics;
+#include "Types.h"
 
 #define	SGL_NONE							0
 
@@ -139,7 +137,7 @@ using namespace SCFMathematics;
 //Clear() argument definitions
 //#define	SGL_COLOR_BUFFER_BIT				0x0001
 //#define	SGL_DEPTH_BUFFER_BIT				0x0010
-#define	SGL_ACCUM_BUFFER_BIT				0x0100
+#define	SGL_ACCUM_BUFFER_BIT				0x0200
 #define	SGL_STENCIL_BUFFER_BIT				0x1000
 
 //PushAttrib() argument definitions
@@ -186,6 +184,22 @@ using namespace SCFMathematics;
 #define	SGL_INT								2430
 #define	SGL_FLOAT							2431
 
+//TexParameteri() argument definitions
+#define SGL_NEAREST                         0x2600
+//#define SGL_LINEAR                          0x2601
+#define SGL_NEAREST_MIPMAP_NEAREST          0x2700
+#define SGL_LINEAR_MIPMAP_NEAREST           0x2701
+#define SGL_NEAREST_MIPMAP_LINEAR           0x2702
+#define SGL_LINEAR_MIPMAP_LINEAR            0x2703
+
+#define SGL_TEXTURE_MAG_FILTER              0x2800
+#define SGL_TEXTURE_MIN_FILTER              0x2801
+#define SGL_TEXTURE_WRAP_S                  0x2802
+#define SGL_TEXTURE_WRAP_T                  0x2803
+
+#define SGL_CLAMP                           0x2900
+#define SGL_REPEAT                          0x2901
+
 namespace ShadowGL
 {
 	//Base ShadowGL Information
@@ -219,4 +233,65 @@ namespace ShadowGL
 	SHADOWGL_API void Rotatef(Float angle, Float x, Float y, Float z);
 	SHADOWGL_API void Translatef(Float x, Float y, Float z);
 	SHADOWGL_API void Scalef(Float x, Float y, Float z);
+
+    SHADOWGL_API	void Enable(Enum cap);
+    SHADOWGL_API	void Disable(Enum cap);
+
+    SHADOWGL_API	Boolean IsEnabled(Enum cap);
+
+    SHADOWGL_API	void Lightf(Enum light, Enum pname, Float param);
+    SHADOWGL_API	void Lightfv(Enum light, Enum pname, const Float *params);
+
+    SHADOWGL_API	void LightModeli(Enum pname, Int param);
+    SHADOWGL_API	void LightModelfv(Enum pname, const Float *params);
+
+    SHADOWGL_API	void GetBooleanv(Enum pname, Boolean * params);
+    SHADOWGL_API	void GetDoublev(Enum pname, Double * params);
+    SHADOWGL_API	void GetFloatv(Enum pname, Float * params);
+    SHADOWGL_API	void GetIntegerv(Enum pname, Int * params);
+
+    SHADOWGL_API	void GetLightfv(Enum light, Enum pname, Float * params);
+
+    SHADOWGL_API	const UByte* GetString(Enum name);
+
+    SHADOWGL_API	void Materialfv(Enum face, Enum pname, const Float *params);
+
+    SHADOWGL_API	void FrontFace(Enum dir);
+    SHADOWGL_API	void CullFace(Enum mode);
+
+    SHADOWGL_API	void Fogf(Enum pname, Float param);
+    SHADOWGL_API	void Fogi(Enum pname, Int param);
+    SHADOWGL_API	void Fogfv(Enum pname, const Float *params);
+
+    SHADOWGL_API	void TexImage1D(Enum target, Int level, Int components, SizeI width, Int border, Enum format, Enum type, const void *pixels);
+    SHADOWGL_API	void TexImage2D(Enum target, Int level, Int components, SizeI width, SizeI height, Int border, Enum format, Enum type, const void *pixels);
+
+    SHADOWGL_API	void TexEnvf(Enum target, Enum pname, Float param);
+    SHADOWGL_API	void TexEnvi(Enum target, Enum pname, Int param);
+
+    SHADOWGL_API	void TexParameteri(Enum target, Enum pname, Int param);
+
+    SHADOWGL_API    void GetTexParameteriv(Enum target, Enum pname, Int *params);
+
+    SHADOWGL_API	void GenTextures(SizeI n, Int * textures);
+    SHADOWGL_API	void DeleteTextures(SizeI n, const Int * textures);
+
+    SHADOWGL_API	void BindTexture(Enum target, Int texture);
+
+    SHADOWGL_API	void PixelTransferf(Enum pname, Float param);
+
+    SHADOWGL_API    void PushAttrib(Bitfield mask);
+    SHADOWGL_API    void PopAttrib();
+
+    SHADOWGL_API void Begin(Enum primType);
+    SHADOWGL_API void End();
+
+    SHADOWGL_API void Vertex3f(Float x, Float y, Float z);
+
+    SHADOWGL_API void Color3f(Float r, Float g, Float b);
+    SHADOWGL_API void Color4f(Float r, Float g, Float b, Float a);
+    SHADOWGL_API void Color4fv(const Float *v);
+
+    SHADOWGL_API void Normal3f(Float x, Float y, Float z);
+    SHADOWGL_API void TexCoord2f(Float x, Float y);
 }

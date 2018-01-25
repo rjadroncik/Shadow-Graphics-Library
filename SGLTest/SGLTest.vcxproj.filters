@@ -31,9 +31,6 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SGL.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SGLTest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -42,9 +39,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Author.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="Not Meant.bmp">
       <Filter>Resource Files</Filter>
     </Image>

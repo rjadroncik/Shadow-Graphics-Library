@@ -128,7 +128,7 @@ SHADOWGL_API HRC ShadowGL::CreateContext(HDC hDC)
 	pNewRC->CullStyle   = SGL_BACK;
 	pNewRC->FrontFace   = SGL_CCW;
 
-	pNewRC->TexEnvMode = SGL_MODULATE;
+	pNewRC->Texture.EnvMode = SGL_MODULATE;
 
 	//Initialize primitive state
 	for (BYTE i = 0; i < MAX_PRIMITIVE_VERTICES; i++)
@@ -216,7 +216,7 @@ SHADOWGL_API HRC ShadowGL::CreateContext(HDC hDC)
 
 	pNewRC->Enable.Texturing2D	= false;
 	ZeroVector4(pNewRC->Ambient);
-	pNewRC->TexEnvMode	= SGL_MODULATE;
+	pNewRC->Texture.EnvMode	= SGL_MODULATE;
 
 /*	pNewRC->DepthTest = true;
 
@@ -229,8 +229,8 @@ SHADOWGL_API HRC ShadowGL::CreateContext(HDC hDC)
 		pNewRC->ClipPlaneEnabled[UByte01] = false;
 	}
 */
-	pNewRC->ErrorCode		= 0;
-	pNewRC->TexCurrent2D	= 0;
+	pNewRC->ErrorCode		  = 0;
+	pNewRC->Texture.Current2D = 0;
 
 	//Initialize pixel transfer state
 	pNewRC->PixelTransfer.Bias_Alpha	= 0;

@@ -256,8 +256,8 @@ SHADOWGL_API void ShadowGL::GetFloatv(Enum pname, Float *params)
 	if (pname == SGL_FOG_START)   { *params = RC.Fog.Start; return; } 
 	if (pname == SGL_FOG_END)     { *params = RC.Fog.End; return; } 
 
-	if (pname == SGL_LIGHT_MODEL_AMBIENT) { CopyVector4(*(Float4*)params, RC.Ambient);     return; } 
-	if (pname == SGL_TEXTURE_ENV_COLOR)   { CopyVector4(*(Float4*)params, RC.TexEnvColor); return; } 
+	if (pname == SGL_LIGHT_MODEL_AMBIENT) { CopyVector4(*(Float4*)params, RC.Ambient);          return; } 
+	if (pname == SGL_TEXTURE_ENV_COLOR)   { CopyVector4(*(Float4*)params, RC.Texture.EnvColor); return; } 
 
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
@@ -286,7 +286,7 @@ SHADOWGL_API void ShadowGL::GetIntegerv(Enum pname, Int *params)
 	if (pname == SGL_PROJECTION_STACK_DEPTH)		{ *params = RC.Matrix.PCurrent + 1;  return; } 
 	if (pname == SGL_TEXTURE_STACK_DEPTH)			{ *params = RC.Matrix.TCurrent + 1;  return; } 
 
-	if (pname == SGL_TEXTURE_ENV_MODE)				{ *params = RC.TexEnvMode; return; }
+	if (pname == SGL_TEXTURE_ENV_MODE)				{ *params = RC.Texture.EnvMode; return; }
 
 	if (pname == SGL_VIEWPORT)
 	{ 
@@ -471,18 +471,18 @@ SHADOWGL_API void ShadowGL::TexImage2D(Enum target, Int level, Int components, S
 	if (!bHeightOk || !bWidthOk) { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
 
 	//Copy information
-	Texture[RC.TexCurrent2D].Width  = (UShort)width;
-	Texture[RC.TexCurrent2D].Height = (UShort)height;
+	Texture[RC.Texture.Current2D].Width  = (UShort)width;
+	Texture[RC.Texture.Current2D].Height = (UShort)height;
 
-	Texture[RC.TexCurrent2D].Target     = target;
-	Texture[RC.TexCurrent2D].Components = (UByte)components;
+	Texture[RC.Texture.Current2D].Target     = target;
+	Texture[RC.Texture.Current2D].Components = (UByte)components;
 
-	Texture[RC.TexCurrent2D].Format = format;
-	Texture[RC.TexCurrent2D].Used   = true;
+	Texture[RC.Texture.Current2D].Format = format;
+	Texture[RC.Texture.Current2D].Used   = true;
 
 	//Allocate memory for pixels
 	UInt TextureSize = height * width * components;
-	Texture[RC.TexCurrent2D].pData = (UByte*)CMemory::Allocate(TextureSize);
+	Texture[RC.Texture.Current2D].pData = (UByte*)CMemory::Allocate(TextureSize);
 
 	UINT RedOffset   = 0;
 	UINT GreenOffset = 1;
@@ -502,9 +502,9 @@ SHADOWGL_API void ShadowGL::TexImage2D(Enum target, Int level, Int components, S
 
 		for (UInt i = 0; i < TextureSize; i += 3)
 		{
-			Texture[RC.TexCurrent2D].pData[i + RedOffset]   = (UByte)((RedScale   * ((UByte*)pixels)[i    ] + RC.PixelTransfer.Bias_Red)   * 255);
-			Texture[RC.TexCurrent2D].pData[i + GreenOffset] = (UByte)((GreenScale * ((UByte*)pixels)[i + 1] + RC.PixelTransfer.Bias_Green) * 255);
-			Texture[RC.TexCurrent2D].pData[i + BlueOffset]  = (UByte)((BlueScale  * ((UByte*)pixels)[i + 2] + RC.PixelTransfer.Bias_Blue)  * 255);
+			Texture[RC.Texture.Current2D].pData[i + RedOffset]   = (UByte)((RedScale   * ((UByte*)pixels)[i    ] + RC.PixelTransfer.Bias_Red)   * 255);
+			Texture[RC.Texture.Current2D].pData[i + GreenOffset] = (UByte)((GreenScale * ((UByte*)pixels)[i + 1] + RC.PixelTransfer.Bias_Green) * 255);
+			Texture[RC.Texture.Current2D].pData[i + BlueOffset]  = (UByte)((BlueScale  * ((UByte*)pixels)[i + 2] + RC.PixelTransfer.Bias_Blue)  * 255);
 		}
 		return;
 	}
@@ -520,12 +520,35 @@ SHADOWGL_API void ShadowGL::TexEnvi(Enum target, Enum pname, Float param)
 {
 
 }
+*/
 
 SHADOWGL_API void ShadowGL::TexParameteri(Enum target, Enum pname, Int param)
 {
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("TexParameteri()"), MB_OK | MB_ICONERROR); return; }
+    if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
+    if (pname == SGL_TEXTURE_MAG_FILTER) { RC.Texture.MagFilter = param; return; }
+    if (pname == SGL_TEXTURE_MIN_FILTER) { RC.Texture.MinFilter = param; return; }
+
+    if (pname == SGL_TEXTURE_WRAP_S) { RC.Texture.WrapS = param; return; }
+    if (pname == SGL_TEXTURE_WRAP_T) { RC.Texture.WrapT = param; return; }
+
+    RC.ErrorCode = SGL_INVALID_ENUM;
 }
-*/
+
+SHADOWGL_API void ShadowGL::GetTexParameteriv(Enum target, Enum pname, Int *params)
+{
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("TexParameteri()"), MB_OK | MB_ICONERROR); return; }
+    if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
+
+    if (pname == SGL_TEXTURE_MAG_FILTER) { *params = RC.Texture.MagFilter; return; }
+    if (pname == SGL_TEXTURE_MIN_FILTER) { *params = RC.Texture.MinFilter; return; }
+
+    if (pname == SGL_TEXTURE_WRAP_S) { *params = RC.Texture.WrapS; return; }
+    if (pname == SGL_TEXTURE_WRAP_T) { *params = RC.Texture.WrapT; return; }
+
+    RC.ErrorCode = SGL_INVALID_ENUM;
+}
 
 SHADOWGL_API void ShadowGL::GenTextures(SizeI n, Int *textures)
 {
@@ -538,9 +561,9 @@ SHADOWGL_API void ShadowGL::GenTextures(SizeI n, Int *textures)
 
 	for (UByte i = 1;  i < MAX_TEXTURES;  i++)
 	{
-		if (!RC.TexNameUsed[i])
+		if (!RC.Texture.NameUsed[i])
 		{
-			RC.TexNameUsed[i] = true;
+			RC.Texture.NameUsed[i] = true;
 
 			textures[CurrentTexture] =  i;
 			
@@ -561,17 +584,17 @@ SHADOWGL_API void ShadowGL::DeleteTextures(SizeI n, const Int *textures)
 	{
 		if ((textures[i] <= 0) || (textures[i] > 255)) { continue;	}
 
-		if (RC.TexNameUsed[textures[i]])
+		if (RC.Texture.NameUsed[textures[i]])
 		{
-			RC.TexNameUsed[i] = false;
+			RC.Texture.NameUsed[i] = false;
 
 			if (Texture[textures[i]].Used)
 			{
 				CMemory::Free(Texture[textures[i]].pData);
 
 				//Clear active texture bindings
-				if ((Texture[textures[i]].Target == SGL_TEXTURE_1D) && (textures[i] == RC.TexCurrent1D)) { RC.TexCurrent1D = 0; }
-				if ((Texture[textures[i]].Target == SGL_TEXTURE_2D) && (textures[i] == RC.TexCurrent2D)) { RC.TexCurrent2D = 0; }
+				if ((Texture[textures[i]].Target == SGL_TEXTURE_1D) && (textures[i] == RC.Texture.Current1D)) { RC.Texture.Current1D = 0; }
+				if ((Texture[textures[i]].Target == SGL_TEXTURE_2D) && (textures[i] == RC.Texture.Current2D)) { RC.Texture.Current2D = 0; }
 
 				Texture[textures[i]].Used		= false;
 				Texture[textures[i]].pData		= nullptr;
@@ -602,8 +625,8 @@ SHADOWGL_API void ShadowGL::BindTexture(Enum target, Int texture)
 	if (Texture[texture].Used) { if (target != Texture[texture].Target) { RC.ErrorCode = SGL_INVALID_OPERATION; return; } }
 	else                       { Texture[texture].Target = target; }
 
-	if (target == SGL_TEXTURE_1D) { RC.TexCurrent1D = (UByte)texture; return; }
-	if (target == SGL_TEXTURE_2D) { RC.TexCurrent2D = (UByte)texture; return; }
+	if (target == SGL_TEXTURE_1D) { RC.Texture.Current1D = (UByte)texture; return; }
+	if (target == SGL_TEXTURE_2D) { RC.Texture.Current2D = (UByte)texture; return; }
 
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }

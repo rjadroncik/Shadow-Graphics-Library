@@ -115,8 +115,6 @@ IDB_ANGELGL             BITMAP                  "ShadowGL.bmp"
 
 IDB_NOT_MEANT           BITMAP                  "Not Meant.bmp"
 
-IDB_AUTHOR              BITMAP                  "Author.bmp"
-
 
 /////////////////////////////////////////////////////////////////////////////
 //

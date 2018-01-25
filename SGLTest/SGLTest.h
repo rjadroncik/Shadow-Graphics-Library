@@ -1,4 +1,4 @@
 #pragma once
 
 #include "resource.h"
-#include "SGL.h"
+#include "../ShadowGL/ShadowGL.h"
