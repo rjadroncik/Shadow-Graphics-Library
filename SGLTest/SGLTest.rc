@@ -35,18 +35,18 @@ BEGIN
     GROUPBOX        "Key Chart ",IDC_STATIC,4,4,247,137
     DEFPUSHBUTTON   "OK",IDOK,210,123,34,12
     LTEXT           "Space",IDC_STATIC,10,15,22,8
-    LTEXT           "Start/Stop Animation",IDC_STATIC,40,15,66,8
+    LTEXT           "Start/Stop Animation",IDC_STATIC,42,15,66,8
     LTEXT           "Escape",IDC_STATIC,10,25,25,8
-    LTEXT           "Quit Application",IDC_STATIC,40,25,50,8
+    LTEXT           "Quit Application",IDC_STATIC,42,25,50,8
     LTEXT           "Left",IDC_STATIC,10,49,21,8
-    LTEXT           "Left, Strafe Left",IDC_STATIC,40,49,50,8
+    LTEXT           "Left, Strafe Left",IDC_STATIC,42,49,50,8
     LTEXT           "Right",IDC_STATIC,10,60,25,8
-    LTEXT           "Right, Strafe Right",IDC_STATIC,40,60,59,8
+    LTEXT           "Right, Strafe Right",IDC_STATIC,42,60,59,8
     LTEXT           "Movement :",IDC_STATIC,10,39,38,8
     LTEXT           "Up",IDC_STATIC,10,70,27,8
-    LTEXT           "Up, Forward",IDC_STATIC,40,70,40,8
+    LTEXT           "Up, Forward",IDC_STATIC,42,70,40,8
     LTEXT           "Down",IDC_STATIC,10,80,27,8
-    LTEXT           "Down, Back",IDC_STATIC,40,80,40,8
+    LTEXT           "Down, Back",IDC_STATIC,42,80,40,8
     LTEXT           "Keypad +",IDC_STATIC,130,15,34,8
     LTEXT           "Increase Cube Spin",IDC_STATIC,164,15,63,8
     LTEXT           "Keypad -",IDC_STATIC,130,25,30,8
@@ -62,10 +62,12 @@ BEGIN
     LTEXT           "P",IDC_STATIC,130,80,8,8
     LTEXT           "Show/Hide Plane",IDC_STATIC,164,80,57,8
     LTEXT           "Tab",IDC_STATIC,10,100,14,8
-    LTEXT           "Toggle : Camera, Cube,",IDC_STATIC,40,100,76,8
-    LTEXT           "Plane or Light",IDC_STATIC,40,110,44,8
-    LTEXT           "~",IDC_STATIC,10,129,8,8
-    LTEXT           "Toggle Mouse Look*",IDC_STATIC,40,129,67,8
+    LTEXT           "Toggle : Camera, Cube,",IDC_STATIC,42,100,76,8
+    LTEXT           "Plane or Light",IDC_STATIC,42,110,44,8
+    LTEXT           "Keypad *",IDC_STATIC,10,129,32,8
+    LTEXT           "Toggle Mouse Look*",IDC_STATIC,42,129,67,8
+    LTEXT           "R",IDC_STATIC,130,90,8,8
+    LTEXT           "Toggle Linear Filtering",IDC_STATIC,164,90,70,8
 END
 
 IDD_OPTIONS_FOG DIALOG 0, 0, 134, 84
@@ -129,7 +131,7 @@ BEGIN
         LEFTMARGIN, 4
         RIGHTMARGIN, 251
         VERTGUIDE, 10
-        VERTGUIDE, 40
+        VERTGUIDE, 42
         VERTGUIDE, 130
         VERTGUIDE, 164
         TOPMARGIN, 4
@@ -257,6 +259,17 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_ABOUTBOX AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // Menu
 //
 
@@ -286,17 +299,6 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_TEST                ICON                    "..\\ShadowGL\\ShadowGL.ico"
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// AFX_DIALOG_LAYOUT
-//
-
-IDD_ABOUTBOX AFX_DIALOG_LAYOUT
-BEGIN
-    0
-END
 
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////

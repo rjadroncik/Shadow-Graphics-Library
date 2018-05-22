@@ -178,13 +178,13 @@ namespace ShadowGLPrivate
             {
                 if (RC.Primitive.ClipCount)
                 {
-                    PreparePolygon(state, &RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
+                    PreparePolygon(&RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
                     RasterizePolygon(state, &RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
                 }
             }
             else
             {
-                PreparePolygon(state, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
+                PreparePolygon(&RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
                 RasterizePolygon(state, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
             }
 
@@ -483,7 +483,7 @@ namespace ShadowGLPrivate
 		}
 	}
 
-	void PreparePolygon(SRendererState& state, tVertex *vertex, UInt count)
+	void PreparePolygon(tVertex *vertex, UInt count)
 	{
 		//Vertex processing continued...
 		for (UInt i = 0; i < count; i++)
@@ -530,8 +530,6 @@ namespace ShadowGLPrivate
 
 				if (FogContribution < 0) { FogContribution = 0; } 
 				if (FogContribution > 1) { FogContribution = 1; } 
-
-				float InverseFogContribution = 1 - FogContribution; 
 
 				vertex[i].FogFactor = FogContribution;
               

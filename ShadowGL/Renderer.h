@@ -10,7 +10,7 @@ namespace ShadowGLPrivate
 
 	void PrepareLighting(SEnable& enable, tVertex *vertex, UInt count);
 
-	void PreparePolygon(SRendererState& state, tVertex *vertex, UInt count);
+	void PreparePolygon(tVertex *vertex, UInt count);
 	void RasterizePolygon(SRendererState& state, tVertex *vertex, UInt count);
 
 	void RasterizeTriangle(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3);

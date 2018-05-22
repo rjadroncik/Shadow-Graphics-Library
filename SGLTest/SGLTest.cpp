@@ -177,7 +177,7 @@ void ProcessKeyboardInput()
 
         if (ButtonPressed(VK_TAB)) { MoveMode++; if (MoveMode > 4) { MoveMode = 0; } }
 
-        if (ButtonPressed(VK_OEM_3))
+        if (ButtonPressed(VK_MULTIPLY))
         {
             MouseLook = !MouseLook;
 

@@ -5,9 +5,6 @@
 #include <SCFObjectExtensions.h>
 #include <intrin.h>
 
-//#define WIN32_LEAN_AND_MEAN
-//#include <windows.h>
-
 //Main Objects
 namespace ShadowGLPrivate
 {
@@ -42,15 +39,17 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserve
 
 				Texture[i].Width = 0;
 				Texture[i].Height = 0;
-
-/*				Texture[i].MinFilter = SGL_LINEAR;
+                
+                /*
+                Texture[i].MinFilter = SGL_LINEAR;
 				Texture[i].MagFilter = SGL_LINEAR;
 
 				Texture[i].S_Wrap = REPEAT;
 				Texture[i].T_Wrap = REPEAT;
-*/
-//				TexNameUsed[i] = false;
-			}				
+
+				TexNameUsed[i] = false;
+                */
+            }
 
             for (UInt i = 0; i < MAX_THREADS; i++)
             {

@@ -4,9 +4,6 @@
 #include <windows.h>
 #include <Vfw.h>
 
-#include <SCFGraphics.h>
-//#include <SCFStandardUndef.h>
-
 #ifdef SHADOWGL_EXPORTS
 #define SHADOWGL_API __declspec(dllexport)
 #else

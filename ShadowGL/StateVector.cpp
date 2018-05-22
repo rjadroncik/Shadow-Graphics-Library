@@ -2,7 +2,7 @@
 #include "Extern.h"
 #include "ShadowGL.h"
 
-//#include <SCFObjectExtensions.h>
+#include <SCFObjectExtensions.h>
 
 using namespace SCFMathematics;
 using namespace ShadowGLPrivate;
