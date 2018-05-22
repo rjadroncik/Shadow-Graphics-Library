@@ -8,7 +8,7 @@ using namespace ShadowGLPrivate;
 
 namespace ShadowGLPrivate
 {
-	SRendererState RS;
+	SRendererState RS[MAX_THREADS];
 
     //Triangle area multipleid by two (simply by removing the division by 2 from the regular formula)
 	inline float TriangleArea2x2(_IN Float2& rVertex1, _IN Float2& rVertex2, _IN Float2& rVertex3)
@@ -29,40 +29,61 @@ namespace ShadowGLPrivate
 
 void SHADOWGL_API ShadowGL::Begin(Enum primType)
 {
-	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Begin()"), MB_OK | MB_ICONERROR); return; } 
-	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Begin()"), MB_OK | MB_ICONERROR); return; }
+    if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	RC.Primitive.Type = (UByte)primType;
+    RC.Primitive.Type = (UByte)primType;
 
-	if (primType == SGL_TRIANGLES)
-	{
-		RC.Primitive.VerticesSubmitted = 0;
-		RC.Primitive.Building = true;
-		return;
-	}
+    if (primType == SGL_TRIANGLES)
+    {
+        RC.Primitive.VerticesSubmitted = 0;
+        RC.Primitive.Building = true;
+        return;
+    }
 }
 
 void SHADOWGL_API ShadowGL::End()
 {
-	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("End()"), MB_OK | MB_ICONERROR); return; } 
-	if (!RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
-	
-	RC.Primitive.VerticesSubmitted = 0;
-	RC.Primitive.Building = false;
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("End()"), MB_OK | MB_ICONERROR); return; }
+    if (!RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
+
+    RC.Primitive.VerticesSubmitted = 0;
+    RC.Primitive.Building = false;
+}
+
+DWORD WINAPI RenderThread(_In_ LPVOID lpParameter)
+{
+    SRendererState& state = *(SRendererState*)lpParameter;
+
+    if (RC.Primitive.IsClipped)
+    {
+        if (RC.Primitive.ClipCount)
+        {
+            PreparePolygon(state, &RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
+            RasterizePolygon(state, &RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
+        }
+    }
+    else
+    {
+        PreparePolygon(state, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
+        RasterizePolygon(state, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
+    }
+
+    return 0;
 }
 
 void SHADOWGL_API ShadowGL::Vertex3f(Float x, Float y, Float z)
 {
-	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Vertex3f()"), MB_OK | MB_ICONERROR); return; } 
-	if (!RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Vertex3f()"), MB_OK | MB_ICONERROR); return; }
+    if (!RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
-	if ((RC.View.Size[0] <= 0) || (RC.View.Size[1] <= 0)) { return; }
+    if ((RC.View.Size[0] <= 0) || (RC.View.Size[1] <= 0)) { return; }
 
     SetVector4(RC.Primitive.Vertex[RC.Primitive.VerticesSubmitted].ObjCoord, x, y, z, 1);
     CopyVector4(RC.Primitive.Vertex[RC.Primitive.VerticesSubmitted].ObjColor, RC.Vertex.Color);
     CopyVector4(RC.Primitive.Vertex[RC.Primitive.VerticesSubmitted].ObjTexCoord, RC.Vertex.TexCoord);
     CopyVector3(RC.Primitive.Vertex[RC.Primitive.VerticesSubmitted].ObjNormal, RC.Vertex.Normal);
-	RC.Primitive.VerticesSubmitted++;
+    RC.Primitive.VerticesSubmitted++;
 
     switch (RC.Primitive.Type)
     {
@@ -78,97 +99,111 @@ void SHADOWGL_API ShadowGL::Vertex3f(Float x, Float y, Float z)
         {
             if (RC.Primitive.VerticesSubmitted == ShadowGLPrivate::TRIANLGE_VERTICES)
             {
-                if (CullTriangle()) { RC.Primitive.VerticesSubmitted = 0; return; }
+                HANDLE threads[MAX_THREADS];
 
-                PrepareLighting(&RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
-
-                if (ClipTriangle())
+                for (UInt i = 0; i < MAX_THREADS; i++)
                 {
-                    if (RC.Primitive.ClipCount)
+                    SRendererState& state = RS[i];
+                    memcpy(&state.Enable, &RC.Enable, sizeof(SEnable));
+
+                    if (i == 0)
                     {
-                        PreparePolygon(&RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
-                        RasterizePolygon(&RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
+                        if (CullTriangle(RC.Enable)) { RC.Primitive.VerticesSubmitted = 0; return; }
+                    
+                        PrepareLighting(RC.Enable, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
+
+                        RC.Primitive.IsClipped = ClipTriangle(RC.Enable);
+                        
+                        for (UInt j = 1; j < MAX_THREADS; j++)
+                        {
+                            memcpy(&RS[j], &RS[0], sizeof(SRendererState));
+                            RS[j].Line.InterlaceId = j;
+                        }
                     }
+
+                    threads[i] = CreateThread(NULL, 0, RenderThread, &state, 0, NULL);
                 }
-                else
+
+                WaitForMultipleObjects(MAX_THREADS, threads, true, INFINITE);
+
+                for (UInt i = 0; i < MAX_THREADS; i++)
                 {
-                    PreparePolygon(&RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
-                    RasterizePolygon(&RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
+                    CloseHandle(threads[i]);
                 }
 
                 RC.Primitive.VerticesSubmitted = 0;
             }
             return;
         }
-    }   
+    }
 }
 
-SHADOWGL_API void ShadowGL::Color3f(Float r, Float g, Float b)
+void SHADOWGL_API ShadowGL::Color3f(Float r, Float g, Float b)
 {
-	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color3f()"), MB_OK | MB_ICONERROR); return; } 
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color3f()"), MB_OK | MB_ICONERROR); return; }
 
-	if (r < 0) { r = 0; } if (r > 1) { r = 1; }
-	if (g < 0) { g = 0; } if (g > 1) { g = 1; }
-	if (b < 0) { b = 0; } if (b > 1) { b = 1; }
+    if (r < 0) { r = 0; } if (r > 1) { r = 1; }
+    if (g < 0) { g = 0; } if (g > 1) { g = 1; }
+    if (b < 0) { b = 0; } if (b > 1) { b = 1; }
 
-	RC.Vertex.Color[0] = r;	
-	RC.Vertex.Color[1] = g;	
-	RC.Vertex.Color[2] = b;	
-	RC.Vertex.Color[3] = 1;	
-}
- 
-SHADOWGL_API void ShadowGL::Color4f(Float r, Float g, Float b, Float a)
-{
-	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color4f()"), MB_OK | MB_ICONERROR); return; } 
-
-	if (r < 0) { r = 0; } if (r > 1) { r = 1; }
-	if (g < 0) { g = 0; } if (g > 1) { g = 1; }
-	if (b < 0) { b = 0; } if (b > 1) { b = 1; }
-	if (a < 0) { a = 0; } if (a > 1) { a = 1; }
-
-	RC.Vertex.Color[0] = r;	
-	RC.Vertex.Color[1] = g;	
-	RC.Vertex.Color[2] = b;	
-	RC.Vertex.Color[3] = a;	
-} 
-
-SHADOWGL_API void ShadowGL::Color4fv(const Float *v)
-{
-	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color4f()"), MB_OK | MB_ICONERROR); return; } 
-
-	RC.Vertex.Color[0] = v[0];	
-	RC.Vertex.Color[1] = v[1];	
-	RC.Vertex.Color[2] = v[2];	
-	RC.Vertex.Color[3] = v[3];	
-
-	if (RC.Vertex.Color[0] < 0) { RC.Vertex.Color[0] = 0; } if (RC.Vertex.Color[0] > 1) { RC.Vertex.Color[0] = 1; }
-	if (RC.Vertex.Color[1] < 0) { RC.Vertex.Color[1] = 0; } if (RC.Vertex.Color[1] > 1) { RC.Vertex.Color[1] = 1; }
-	if (RC.Vertex.Color[2] < 0) { RC.Vertex.Color[2] = 0; } if (RC.Vertex.Color[2] > 1) { RC.Vertex.Color[2] = 1; }
-	if (RC.Vertex.Color[3] < 0) { RC.Vertex.Color[3] = 0; } if (RC.Vertex.Color[3] > 1) { RC.Vertex.Color[3] = 1; }
-} 
-
-SHADOWGL_API void ShadowGL::Normal3f(Float x, Float y, Float z)
-{
-	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color4f()"), MB_OK | MB_ICONERROR); return; } 
-
-	RC.Vertex.Normal[0] = x;	
-	RC.Vertex.Normal[1] = y;	
-	RC.Vertex.Normal[2] = z;	
+    RC.Vertex.Color[0] = r;
+    RC.Vertex.Color[1] = g;
+    RC.Vertex.Color[2] = b;
+    RC.Vertex.Color[3] = 1;
 }
 
-SHADOWGL_API void ShadowGL::TexCoord2f(Float x, Float y)
+void SHADOWGL_API ShadowGL::Color4f(Float r, Float g, Float b, Float a)
 {
-	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color4f()"), MB_OK | MB_ICONERROR); return; } 
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color4f()"), MB_OK | MB_ICONERROR); return; }
 
-	RC.Vertex.TexCoord[0] = x;	
-	RC.Vertex.TexCoord[1] = 1 - y;	
-	RC.Vertex.TexCoord[2] = 0;	
-	RC.Vertex.TexCoord[3] = 0;	
+    if (r < 0) { r = 0; } if (r > 1) { r = 1; }
+    if (g < 0) { g = 0; } if (g > 1) { g = 1; }
+    if (b < 0) { b = 0; } if (b > 1) { b = 1; }
+    if (a < 0) { a = 0; } if (a > 1) { a = 1; }
+
+    RC.Vertex.Color[0] = r;
+    RC.Vertex.Color[1] = g;
+    RC.Vertex.Color[2] = b;
+    RC.Vertex.Color[3] = a;
+}
+
+void SHADOWGL_API ShadowGL::Color4fv(const Float *v)
+{
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color4f()"), MB_OK | MB_ICONERROR); return; }
+
+    RC.Vertex.Color[0] = v[0];
+    RC.Vertex.Color[1] = v[1];
+    RC.Vertex.Color[2] = v[2];
+    RC.Vertex.Color[3] = v[3];
+
+    if (RC.Vertex.Color[0] < 0) { RC.Vertex.Color[0] = 0; } if (RC.Vertex.Color[0] > 1) { RC.Vertex.Color[0] = 1; }
+    if (RC.Vertex.Color[1] < 0) { RC.Vertex.Color[1] = 0; } if (RC.Vertex.Color[1] > 1) { RC.Vertex.Color[1] = 1; }
+    if (RC.Vertex.Color[2] < 0) { RC.Vertex.Color[2] = 0; } if (RC.Vertex.Color[2] > 1) { RC.Vertex.Color[2] = 1; }
+    if (RC.Vertex.Color[3] < 0) { RC.Vertex.Color[3] = 0; } if (RC.Vertex.Color[3] > 1) { RC.Vertex.Color[3] = 1; }
+}
+
+void SHADOWGL_API ShadowGL::Normal3f(Float x, Float y, Float z)
+{
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color4f()"), MB_OK | MB_ICONERROR); return; }
+
+    RC.Vertex.Normal[0] = x;
+    RC.Vertex.Normal[1] = y;
+    RC.Vertex.Normal[2] = z;
+}
+
+void SHADOWGL_API ShadowGL::TexCoord2f(Float x, Float y)
+{
+    if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Color4f()"), MB_OK | MB_ICONERROR); return; }
+
+    RC.Vertex.TexCoord[0] = x;
+    RC.Vertex.TexCoord[1] = 1 - y;
+    RC.Vertex.TexCoord[2] = 0;
+    RC.Vertex.TexCoord[3] = 0;
 }
 
 namespace ShadowGLPrivate
 {
-	bool CullTriangle()
+	bool CullTriangle(SEnable& enable)
 	{
 		//Vertex Processing
 		for (UByte i = 0; i < ShadowGLPrivate::TRIANLGE_VERTICES; i++)
@@ -178,7 +213,7 @@ namespace ShadowGLPrivate
 		}
 
 		//Face Culling	 
-		if (RC.Enable.FaceCulling)
+		if (enable.FaceCulling)
 		{
 			//Find Normal
             Float3 normal;
@@ -202,7 +237,7 @@ namespace ShadowGLPrivate
 		return false;
 	}
 
-	bool ClipTriangle()
+	bool ClipTriangle(SEnable& enable)
 	{
 		Boolean	needsClipping = false;
 
@@ -226,20 +261,20 @@ namespace ShadowGLPrivate
 		if (!needsClipping) { return false; }
 
         //Clipping can result in adding vertices
-		RC.Primitive.ClipCount = ClipPolygonAtPlane(&RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES, &RC.View.ClipPlane[5][0], &RC.Primitive.ClipVertex[0][0]);
+		RC.Primitive.ClipCount = ClipPolygonAtPlane(enable, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES, &RC.View.ClipPlane[5][0], &RC.Primitive.ClipVertex[0][0]);
 
-		RC.Primitive.ClipCount = ClipPolygonAtPlane(&RC.Primitive.ClipVertex[0][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[4][0], &RC.Primitive.ClipVertex[1][0]);
-		RC.Primitive.ClipCount = ClipPolygonAtPlane(&RC.Primitive.ClipVertex[1][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[3][0], &RC.Primitive.ClipVertex[0][0]);
-		RC.Primitive.ClipCount = ClipPolygonAtPlane(&RC.Primitive.ClipVertex[0][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[2][0], &RC.Primitive.ClipVertex[1][0]);
-		RC.Primitive.ClipCount = ClipPolygonAtPlane(&RC.Primitive.ClipVertex[1][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[1][0], &RC.Primitive.ClipVertex[0][0]);
-		RC.Primitive.ClipCount = ClipPolygonAtPlane(&RC.Primitive.ClipVertex[0][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[0][0], &RC.Primitive.ClipVertex[1][0]);
+		RC.Primitive.ClipCount = ClipPolygonAtPlane(enable, &RC.Primitive.ClipVertex[0][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[4][0], &RC.Primitive.ClipVertex[1][0]);
+		RC.Primitive.ClipCount = ClipPolygonAtPlane(enable, &RC.Primitive.ClipVertex[1][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[3][0], &RC.Primitive.ClipVertex[0][0]);
+		RC.Primitive.ClipCount = ClipPolygonAtPlane(enable, &RC.Primitive.ClipVertex[0][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[2][0], &RC.Primitive.ClipVertex[1][0]);
+		RC.Primitive.ClipCount = ClipPolygonAtPlane(enable, &RC.Primitive.ClipVertex[1][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[1][0], &RC.Primitive.ClipVertex[0][0]);
+		RC.Primitive.ClipCount = ClipPolygonAtPlane(enable, &RC.Primitive.ClipVertex[0][0], RC.Primitive.ClipCount, &RC.View.ClipPlane[0][0], &RC.Primitive.ClipVertex[1][0]);
 
 		RC.Primitive.ClipArray = 1;
 
         return true;
 	}
 
-	UByte ClipPolygonAtPlane(tVertex* inputVertex, _IN UByte count, const Float* clipPlane, tVertex* outputVertex) 
+	UByte ClipPolygonAtPlane(SEnable& enable, tVertex* inputVertex, _IN UByte count, const Float* clipPlane, tVertex* outputVertex)
 	{
 		UByte v1, v2;
 		UByte VertexIndex = 0;
@@ -300,7 +335,7 @@ namespace ShadowGLPrivate
                 outputVertex[VertexIndex].LitColor[1] = inputVertex[v1].LitColor[1] * Distance01 + inputVertex[v2].LitColor[1] * t;
                 outputVertex[VertexIndex].LitColor[2] = inputVertex[v1].LitColor[2] * Distance01 + inputVertex[v2].LitColor[2] * t;
 
-				if (RC.Enable.Texturing2D)
+				if (enable.Texturing2D)
 				{
 					outputVertex[VertexIndex].ObjTexCoord[0] = inputVertex[v1].ObjTexCoord[0] * Distance01 + inputVertex[v2].ObjTexCoord[0] * t;
 					outputVertex[VertexIndex].ObjTexCoord[1] = inputVertex[v1].ObjTexCoord[1] * Distance01 + inputVertex[v2].ObjTexCoord[1] * t;
@@ -329,13 +364,13 @@ namespace ShadowGLPrivate
 		return VertexIndex;
 	}
 
-	void PrepareLighting(tVertex *vertex, UByte count)
+	void PrepareLighting(SEnable& enable, tVertex *vertex, UInt count)
 	{
         Matrix3 inverseModelView;
 		TruncateTopLeftToMatrix3(inverseModelView, RC.Matrix.ModelViewInverse[RC.Matrix.MVCurrent]); 
 
 		//Vertex processing continued...
-		for (UByte i = 0; i < count; i++)
+		for (UInt i = 0; i < count; i++)
 		{
 			//Process vertex normals (to eye coordinates) 
 			MultiplyVectorT3Matrix3(vertex[i].EyeNormal, vertex[i].ObjNormal, inverseModelView);
@@ -352,7 +387,7 @@ namespace ShadowGLPrivate
 		//Lighting calculations
 		for (UInt i = 0; i < count; i++)
 		{
-			if (RC.Enable.Lighting)
+			if (enable.Lighting)
 			{
 				//Global contributions (emmision + ambient)
 				CopyVector3(  (Float3&)vertex[i].LitColor, (Float3&)RC.Material.Emission);
@@ -420,7 +455,7 @@ namespace ShadowGLPrivate
 					    ScaleVector3(diffuse, (Float3&)RC.Material.Diffuse, DiffuseFactor);
 					    MADVectors3CW(CurLight, diffuse, (Float3&)RC.Light[j].Diffuse);
 
-						if (RC.Enable.LocalViewer)
+						if (enable.LocalViewer)
 						{
 							NormalizeVector3(diffuse, (Float3&)vertex[i].EyeCoord);
 							SubtractVectors3(vertexToLightDirection, vertexToLightDirection, diffuse);
@@ -457,10 +492,10 @@ namespace ShadowGLPrivate
 		}
 	}
 
-	void PreparePolygon(tVertex *vertex, UByte count)
+	void PreparePolygon(SRendererState& state, tVertex *vertex, UInt count)
 	{
 		//Vertex processing continued...
-		for (UByte i = 0; i < count; i++)
+		for (UInt i = 0; i < count; i++)
 		{
 			//Create vertex clip coordinates
 			MultiplyMatrix4Vector4(vertex[i].ClipCoord, RC.Matrix.Projection[RC.Matrix.PCurrent], vertex[i].EyeCoord);
@@ -474,13 +509,13 @@ namespace ShadowGLPrivate
 			vertex[i].ViewCoord[2] = vertex[i].NormCoord[2];// / 2 + 0.5f;  		
 
 			//Process texture coordinates
-			if (RC.Enable.Texturing2D)
+			if (state.Enable.Texturing2D)
 			{
 				MultiplyMatrix4Vector4(vertex[i].FinTexCoord, RC.Matrix.Texture[RC.Matrix.TCurrent], vertex[i].ObjTexCoord);
 			}
 		}
 
-        if (RC.Enable.Fog)
+        if (state.Enable.Fog)
         {
 		    //Lighting calculations
 		    for (UInt i = 0; i < count; i++)
@@ -509,7 +544,7 @@ namespace ShadowGLPrivate
 
 				vertex[i].FogFactor = FogContribution;
 
-				if (!RC.Enable.Texturing1D && !RC.Enable.Texturing2D)
+				if (!state.Enable.Texturing1D && !state.Enable.Texturing2D)
 				{
 					vertex[i].LitColor[0] = FogContribution * vertex[i].LitColor[0] + InverseFogContribution * RC.Fog.Color[0];
 					vertex[i].LitColor[1] = FogContribution * vertex[i].LitColor[1] + InverseFogContribution * RC.Fog.Color[1];
@@ -522,148 +557,156 @@ namespace ShadowGLPrivate
 		}
 	}
 
-	void RasterizePolygon(tVertex *vertex, UByte count)
+	void RasterizePolygon(SRendererState& state, tVertex *vertex, UInt count)
 	{
-		for (UByte i = 0; i < (count - 2); i++)
+		for (UInt i = 0; i < (count - 2); i++)
 		{
 			//Select Vertices
-			RS.V1 = 0;
-			RS.V2 = i + 1;
-			RS.V3 = i + 2;
+			UInt V1 = 0;
+            UInt V2 = i + 1;
+            UInt V3 = i + 2;
 			
 			//Sort Vertices
-			if (vertex[RS.V1].ViewCoord[1] > vertex[RS.V2].ViewCoord[1]) { UByte l_TempByte = RS.V1; RS.V1 = RS.V2; RS.V2 = l_TempByte; }
-			if (vertex[RS.V2].ViewCoord[1] > vertex[RS.V3].ViewCoord[1]) { UByte l_TempByte = RS.V2; RS.V2 = RS.V3; RS.V3 = l_TempByte; }
-			if (vertex[RS.V1].ViewCoord[1] > vertex[RS.V2].ViewCoord[1]) { UByte l_TempByte = RS.V1; RS.V1 = RS.V2; RS.V2 = l_TempByte; }
-			if (vertex[RS.V2].ViewCoord[1] > vertex[RS.V3].ViewCoord[1]) { UByte l_TempByte = RS.V2; RS.V2 = RS.V3; RS.V3 = l_TempByte; }
+			if (vertex[V1].ViewCoord[1] > vertex[V2].ViewCoord[1]) { UInt temp = V1; V1 = V2; V2 = temp; }
+			if (vertex[V2].ViewCoord[1] > vertex[V3].ViewCoord[1]) { UInt temp = V2; V2 = V3; V3 = temp; }
+			if (vertex[V1].ViewCoord[1] > vertex[V2].ViewCoord[1]) { UInt temp = V1; V1 = V2; V2 = temp; }
+			if (vertex[V2].ViewCoord[1] > vertex[V3].ViewCoord[1]) { UInt temp = V2; V2 = V3; V3 = temp; }
 
-			if (vertex[RS.V1].ViewCoord[1] == vertex[RS.V2].ViewCoord[1]) { if (vertex[RS.V1].ViewCoord[0] > vertex[RS.V2].ViewCoord[0]) { UByte l_TempByte = RS.V1; RS.V1 = RS.V2; RS.V2 = l_TempByte; } }
+			if (vertex[V1].ViewCoord[1] == vertex[V2].ViewCoord[1]) 
+            {
+                if (vertex[V1].ViewCoord[0] > vertex[V2].ViewCoord[0]) { UInt temp = V1; V1 = V2; V2 = temp; }
+            }
 
 			//Draw Triangle
-			RasterizeTriangle(&vertex[RS.V1], &vertex[RS.V2], &vertex[RS.V3]); 
+			RasterizeTriangle(state, &vertex[V1], &vertex[V2], &vertex[V3]);
 		}
 	}
 
-	void RasterizeTopPartOfTriangleWithMiddleVertexRight(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+	void RasterizeTopPartOfTriangleWithMiddleVertexRight(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
 	{
-		for (RS.Line[0].Index = RS.Vertex[0].Y; RS.Line[0].Index <= RS.Vertex[1].Y; RS.Line[0].Index++)
+		for (state.Line.Index = state.Vertex[0].Y; state.Line.Index <= state.Vertex[1].Y; state.Line.Index++)
 		{
 			if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
 			{
-				RS.Line[0].Left.X  = - RS.Triangle.Coefficient_13 * ((Float)RS.Line[0].Index + 0.5f) - RS.Triangle.Offset_13;
-				RS.Line[0].Right.X = - RS.Triangle.Coefficient_12 * ((Float)RS.Line[0].Index + 0.5f) - RS.Triangle.Offset_12;
+				state.Line.Left.X  = - state.Triangle.Coefficient_13 * ((Float)state.Line.Index + 0.5f) - state.Triangle.Offset_13;
+				state.Line.Right.X = - state.Triangle.Coefficient_12 * ((Float)state.Line.Index + 0.5f) - state.Triangle.Offset_12;
 			}
-			else { RS.Line[0].Left.X = vertex1->ViewCoord[0]; RS.Line[0].Right.X = vertex2->ViewCoord[0]; }
+			else { state.Line.Left.X = vertex1->ViewCoord[0]; state.Line.Right.X = vertex2->ViewCoord[0]; }
 
-			ScanLine(vertex1, vertex2, vertex3, RS.Line[0], RS.Pixel[0]);
+			ScanLine(state, vertex1, vertex2, vertex3, state.Line, state.Pixel);
 		}
 	}
 
-	void RasterizeBottomPartOfTriangleWithMiddleVertexRight(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+	void RasterizeBottomPartOfTriangleWithMiddleVertexRight(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
 	{    
-		for (RS.Line[1].Index = RS.Vertex[1].Y + 1; RS.Line[1].Index <= RS.Vertex[2].Y; RS.Line[1].Index++)
+		for (state.Line.Index = state.Vertex[1].Y + 1; state.Line.Index <= state.Vertex[2].Y; state.Line.Index++)
 		{
 			//Compute left & right coordinate values
 			if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
 			{
-				RS.Line[1].Left.X  = - RS.Triangle.Coefficient_13 * ((Float)RS.Line[1].Index + 0.5f) - RS.Triangle.Offset_13;
-				RS.Line[1].Right.X = - RS.Triangle.Coefficient_23 * ((Float)RS.Line[1].Index + 0.5f) - RS.Triangle.Offset_23;
+				state.Line.Left.X  = - state.Triangle.Coefficient_13 * ((Float)state.Line.Index + 0.5f) - state.Triangle.Offset_13;
+				state.Line.Right.X = - state.Triangle.Coefficient_23 * ((Float)state.Line.Index + 0.5f) - state.Triangle.Offset_23;
 			}
-			else {	RS.Line[1].Left.X = vertex2->ViewCoord[0]; RS.Line[1].Right.X = vertex3->ViewCoord[0]; }
+			else {	state.Line.Left.X = vertex2->ViewCoord[0]; state.Line.Right.X = vertex3->ViewCoord[0]; }
 
-			ScanLine(vertex1, vertex2, vertex3, RS.Line[1], RS.Pixel[1]);
+			ScanLine(state, vertex1, vertex2, vertex3, state.Line, state.Pixel);
 		}
 	}
 
-    void RasterizeTopPartOfTriangleWithMiddleVertexLeft(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+    void RasterizeTopPartOfTriangleWithMiddleVertexLeft(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
 	{
-		for (RS.Line[0].Index = RS.Vertex[0].Y; RS.Line[0].Index <= RS.Vertex[1].Y; RS.Line[0].Index++)
+		for (state.Line.Index = state.Vertex[0].Y; state.Line.Index <= state.Vertex[1].Y; state.Line.Index++)
 		{
 			if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
 			{
-				RS.Line[0].Right.X = -RS.Triangle.Coefficient_13 * ((Float)RS.Line[0].Index + 0.5f) - RS.Triangle.Offset_13;
-				RS.Line[0].Left.X  = -RS.Triangle.Coefficient_12 * ((Float)RS.Line[0].Index + 0.5f) - RS.Triangle.Offset_12;
+				state.Line.Right.X = -state.Triangle.Coefficient_13 * ((Float)state.Line.Index + 0.5f) - state.Triangle.Offset_13;
+				state.Line.Left.X  = -state.Triangle.Coefficient_12 * ((Float)state.Line.Index + 0.5f) - state.Triangle.Offset_12;
 			}
-			else { RS.Line[0].Right.X = vertex1->ViewCoord[0]; RS.Line[0].Left.X = vertex2->ViewCoord[0]; }
+			else { state.Line.Right.X = vertex1->ViewCoord[0]; state.Line.Left.X = vertex2->ViewCoord[0]; }
 
-			ScanLine(vertex1, vertex2, vertex3, RS.Line[0], RS.Pixel[0]);
+			ScanLine(state, vertex1, vertex2, vertex3, state.Line, state.Pixel);
 		}
     }
 
-    void RasterizeBottomPartOfTriangleWithMiddleVertexLeft(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+    void RasterizeBottomPartOfTriangleWithMiddleVertexLeft(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
     {
-        for (RS.Line[1].Index = RS.Vertex[1].Y + 1; RS.Line[1].Index <= RS.Vertex[2].Y; RS.Line[1].Index++)
+        for (state.Line.Index = state.Vertex[1].Y + 1; state.Line.Index <= state.Vertex[2].Y; state.Line.Index++)
 		{
 			if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
 			{
-				RS.Line[1].Right.X = -RS.Triangle.Coefficient_13 * ((Float)RS.Line[1].Index + 0.5f) - RS.Triangle.Offset_13;
-				RS.Line[1].Left.X  = -RS.Triangle.Coefficient_23 * ((Float)RS.Line[1].Index + 0.5f) - RS.Triangle.Offset_23;
+				state.Line.Right.X = -state.Triangle.Coefficient_13 * ((Float)state.Line.Index + 0.5f) - state.Triangle.Offset_13;
+				state.Line.Left.X  = -state.Triangle.Coefficient_23 * ((Float)state.Line.Index + 0.5f) - state.Triangle.Offset_23;
 			}
-			else { RS.Line[1].Right.X = vertex2->ViewCoord[0]; RS.Line[1].Left.X = vertex3->ViewCoord[0]; }
+			else { state.Line.Right.X = vertex2->ViewCoord[0]; state.Line.Left.X = vertex3->ViewCoord[0]; }
 
-			ScanLine(vertex1, vertex2, vertex3, RS.Line[1], RS.Pixel[1]);
+			ScanLine(state, vertex1, vertex2, vertex3, state.Line, state.Pixel);
 		}
     }
 
-	void RasterizeTriangle(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
+	void RasterizeTriangle(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
 	{
 		//Texturing variables
-		RS.Vertex[0].Clip.W = vertex1->ClipCoord[3]; 
-		RS.Vertex[1].Clip.W	= vertex2->ClipCoord[3];
-		RS.Vertex[2].Clip.W = vertex3->ClipCoord[3];
+		state.Vertex[0].Clip.W = vertex1->ClipCoord[3]; 
+		state.Vertex[1].Clip.W	= vertex2->ClipCoord[3];
+		state.Vertex[2].Clip.W = vertex3->ClipCoord[3];
 
 		//Prepare other values
-		CopyVector4(RS.Fog.Color, RC.Fog.Color);
+		CopyVector4(state.Fog.Color, RC.Fog.Color);
 
-		if (RC.Enable.Texturing2D)
+		if (state.Enable.Texturing2D)
 		{
-            RS.Triangle.pTexture              = Texture[RC.Texture.Current2D].pData;
-            RS.Triangle.TextureWidth          = Texture[RC.Texture.Current2D].Width;
-            RS.Triangle.TextureHeight         = Texture[RC.Texture.Current2D].Height;
-			RS.Texture.Components = Texture[RC.Texture.Current2D].Components;
+            state.Triangle.pTexture      = Texture[RC.Texture.Current2D].pData;
+            state.Triangle.TextureWidth  = Texture[RC.Texture.Current2D].Width;
+            state.Triangle.TextureHeight = Texture[RC.Texture.Current2D].Height;
+			state.Texture.Components     = Texture[RC.Texture.Current2D].Components;
 		}
 
-        RS.Triangle.TriangleArea = TriangleArea2x2((Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord);
+        state.Triangle.TriangleArea = TriangleArea2x2((Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord);
 
 		//Compute coefficients
-		if ((vertex3->ViewCoord[1] - vertex1->ViewCoord[1]) != 0) { RS.Triangle.Coefficient_13 = (vertex1->ViewCoord[0] - vertex3->ViewCoord[0]) / (vertex3->ViewCoord[1] - vertex1->ViewCoord[1]); }
-		else { RS.Triangle.Coefficient_13 = 0; }
+		if ((vertex3->ViewCoord[1] - vertex1->ViewCoord[1]) != 0) { state.Triangle.Coefficient_13 = (vertex1->ViewCoord[0] - vertex3->ViewCoord[0]) / (vertex3->ViewCoord[1] - vertex1->ViewCoord[1]); }
+		else { state.Triangle.Coefficient_13 = 0; }
 
-		if ((vertex2->ViewCoord[1] - vertex1->ViewCoord[1]) != 0) { RS.Triangle.Coefficient_12 = (vertex1->ViewCoord[0] - vertex2->ViewCoord[0]) / (vertex2->ViewCoord[1] - vertex1->ViewCoord[1]); }
-		else { RS.Triangle.Coefficient_12 = 0; }
+		if ((vertex2->ViewCoord[1] - vertex1->ViewCoord[1]) != 0) { state.Triangle.Coefficient_12 = (vertex1->ViewCoord[0] - vertex2->ViewCoord[0]) / (vertex2->ViewCoord[1] - vertex1->ViewCoord[1]); }
+		else { state.Triangle.Coefficient_12 = 0; }
 
-		if ((vertex3->ViewCoord[1] - vertex2->ViewCoord[1]) != 0) { RS.Triangle.Coefficient_23 = (vertex2->ViewCoord[0] - vertex3->ViewCoord[0]) / (vertex3->ViewCoord[1] - vertex2->ViewCoord[1]); }
-		else { RS.Triangle.Coefficient_23 = 0; }
+		if ((vertex3->ViewCoord[1] - vertex2->ViewCoord[1]) != 0) { state.Triangle.Coefficient_23 = (vertex2->ViewCoord[0] - vertex3->ViewCoord[0]) / (vertex3->ViewCoord[1] - vertex2->ViewCoord[1]); }
+		else { state.Triangle.Coefficient_23 = 0; }
 
 		//Compute offsets
-        RS.Triangle.Offset_13 = -RS.Triangle.Coefficient_13 * vertex1->ViewCoord[1] - vertex1->ViewCoord[0];
-        RS.Triangle.Offset_12 = -RS.Triangle.Coefficient_12 * vertex1->ViewCoord[1] - vertex1->ViewCoord[0];
-        RS.Triangle.Offset_23 = -RS.Triangle.Coefficient_23 * vertex2->ViewCoord[1] - vertex2->ViewCoord[0];
+        state.Triangle.Offset_13 = -state.Triangle.Coefficient_13 * vertex1->ViewCoord[1] - vertex1->ViewCoord[0];
+        state.Triangle.Offset_12 = -state.Triangle.Coefficient_12 * vertex1->ViewCoord[1] - vertex1->ViewCoord[0];
+        state.Triangle.Offset_23 = -state.Triangle.Coefficient_23 * vertex2->ViewCoord[1] - vertex2->ViewCoord[0];
 
 		//Apply left-top rasterization rules to vertex values
-		if (vertex1->ViewCoord[1] > ((Int)vertex1->ViewCoord[1] + 0.5f)) { RS.Vertex[0].Y = (Int)vertex1->ViewCoord[1] + 1; }
-		else { RS.Vertex[0].Y = (Int)vertex1->ViewCoord[1]; }
+		if (vertex1->ViewCoord[1] > ((Int)vertex1->ViewCoord[1] + 0.5f)) { state.Vertex[0].Y = (Int)vertex1->ViewCoord[1] + 1; }
+		else { state.Vertex[0].Y = (Int)vertex1->ViewCoord[1]; }
 
-		if (vertex2->ViewCoord[1] < ((Int)vertex2->ViewCoord[1] + 0.5f)) { RS.Vertex[1].Y = (Int)vertex2->ViewCoord[1] - 1; }
-		else { RS.Vertex[1].Y = (Int)vertex2->ViewCoord[1]; }
+		if (vertex2->ViewCoord[1] < ((Int)vertex2->ViewCoord[1] + 0.5f)) { state.Vertex[1].Y = (Int)vertex2->ViewCoord[1] - 1; }
+		else { state.Vertex[1].Y = (Int)vertex2->ViewCoord[1]; }
 
-		if (vertex3->ViewCoord[1] <= ((Int)vertex3->ViewCoord[1] + 0.5f)) { RS.Vertex[2].Y = (Int)vertex3->ViewCoord[1] - 1; }
-		else { RS.Vertex[2].Y = (Int)vertex3->ViewCoord[1]; }
+		if (vertex3->ViewCoord[1] <= ((Int)vertex3->ViewCoord[1] + 0.5f)) { state.Vertex[2].Y = (Int)vertex3->ViewCoord[1] - 1; }
+		else { state.Vertex[2].Y = (Int)vertex3->ViewCoord[1]; }
 
-		if (vertex2->ViewCoord[0] >= (-RS.Triangle.Coefficient_13 * vertex2->ViewCoord[1] - RS.Triangle.Offset_13))
+		if (vertex2->ViewCoord[0] >= (-state.Triangle.Coefficient_13 * vertex2->ViewCoord[1] - state.Triangle.Offset_13))
 		{
-            RasterizeTopPartOfTriangleWithMiddleVertexRight(vertex1, vertex2, vertex3);
-            RasterizeBottomPartOfTriangleWithMiddleVertexRight(vertex1, vertex2, vertex3);
+            RasterizeTopPartOfTriangleWithMiddleVertexRight(state, vertex1, vertex2, vertex3);
+            RasterizeBottomPartOfTriangleWithMiddleVertexRight(state, vertex1, vertex2, vertex3);
 		}
 		else
 		{
-            RasterizeTopPartOfTriangleWithMiddleVertexLeft(vertex1, vertex2, vertex3);
-            RasterizeBottomPartOfTriangleWithMiddleVertexLeft(vertex1, vertex2, vertex3);
+            RasterizeTopPartOfTriangleWithMiddleVertexLeft(state, vertex1, vertex2, vertex3);
+            RasterizeBottomPartOfTriangleWithMiddleVertexLeft(state, vertex1, vertex2, vertex3);
 		}
 	}
 
-	void ScanLine(tVertex *vertex1, tVertex *vertex2, tVertex *vertex3, SRendererState::SLineState &line, SRendererState::SCurPixelState &pixel)
+	void ScanLine(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3, SRendererState::SLineState &line, SRendererState::SCurPixelState &pixel)
 	{
+        if (!(state.Line.Index % MAX_THREADS == state.Line.InterlaceId))
+        {
+            return;
+        }
+
         //Prepare line length
         line.Length = (Float)(line.Right.X - line.Left.X);
         if (line.Length == 0) { return; }
@@ -682,13 +725,13 @@ namespace ShadowGLPrivate
         Float3 B_LeftCoord;
         Float3 B_RightCoord;
 
-        B_LeftCoord[0] = TriangleArea2x2(positionLeft, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / RS.Triangle.TriangleArea;
-		B_LeftCoord[1] = TriangleArea2x2(positionLeft, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / RS.Triangle.TriangleArea;
-		B_LeftCoord[2] = TriangleArea2x2(positionLeft, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / RS.Triangle.TriangleArea;
+        B_LeftCoord[0] = TriangleArea2x2(positionLeft, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / state.Triangle.TriangleArea;
+		B_LeftCoord[1] = TriangleArea2x2(positionLeft, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / state.Triangle.TriangleArea;
+		B_LeftCoord[2] = TriangleArea2x2(positionLeft, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / state.Triangle.TriangleArea;
 
-		B_RightCoord[0] = TriangleArea2x2(positionRight, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / RS.Triangle.TriangleArea;
-		B_RightCoord[1] = TriangleArea2x2(positionRight, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / RS.Triangle.TriangleArea;
-		B_RightCoord[2] = TriangleArea2x2(positionRight, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / RS.Triangle.TriangleArea;
+		B_RightCoord[0] = TriangleArea2x2(positionRight, (Float2&)vertex2->ViewCoord, (Float2&)vertex3->ViewCoord) / state.Triangle.TriangleArea;
+		B_RightCoord[1] = TriangleArea2x2(positionRight, (Float2&)vertex1->ViewCoord, (Float2&)vertex3->ViewCoord) / state.Triangle.TriangleArea;
+		B_RightCoord[2] = TriangleArea2x2(positionRight, (Float2&)vertex1->ViewCoord, (Float2&)vertex2->ViewCoord) / state.Triangle.TriangleArea;
 
 		//Prepare z-buffer values
 		line.Left.Z    = B_LeftCoord[0]  * vertex1->ViewCoord[2] + B_LeftCoord[1]  * vertex2->ViewCoord[2] + B_LeftCoord[2]  * vertex3->ViewCoord[2];
@@ -715,19 +758,19 @@ namespace ShadowGLPrivate
         DivideVector4(line.Iterator.Color, line.Iterator.Color, line.Length);
 
 		//Prepare texture coords
-		if (RC.Enable.Texturing2D)
+		if (state.Enable.Texturing2D)
 		{
-			line.Left.Numerator.S  = B_LeftCoord[0]  * vertex1->FinTexCoord[0] / RS.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[0] / RS.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[0] / RS.Vertex[2].Clip.W;
-			line.Right.Numerator.S = B_RightCoord[0] * vertex1->FinTexCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[0] / RS.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[0] / RS.Vertex[2].Clip.W;
+			line.Left.Numerator.S  = B_LeftCoord[0]  * vertex1->FinTexCoord[0] / state.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[0] / state.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[0] / state.Vertex[2].Clip.W;
+			line.Right.Numerator.S = B_RightCoord[0] * vertex1->FinTexCoord[0] / state.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[0] / state.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[0] / state.Vertex[2].Clip.W;
 
-			line.Left.Numerator.T  = B_LeftCoord[0]  * vertex1->FinTexCoord[1] / RS.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[1] / RS.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[1] / RS.Vertex[2].Clip.W;
-			line.Right.Numerator.T = B_RightCoord[0] * vertex1->FinTexCoord[1] / RS.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[1] / RS.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[1] / RS.Vertex[2].Clip.W;
+			line.Left.Numerator.T  = B_LeftCoord[0]  * vertex1->FinTexCoord[1] / state.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[1] / state.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[1] / state.Vertex[2].Clip.W;
+			line.Right.Numerator.T = B_RightCoord[0] * vertex1->FinTexCoord[1] / state.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[1] / state.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[1] / state.Vertex[2].Clip.W;
 
-			line.Left.Denominator.S  = B_LeftCoord[0]  / RS.Vertex[0].Clip.W + B_LeftCoord[1]  / RS.Vertex[1].Clip.W + B_LeftCoord[2]  / RS.Vertex[2].Clip.W;
-			line.Right.Denominator.S = B_RightCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] / RS.Vertex[1].Clip.W + B_RightCoord[2] / RS.Vertex[2].Clip.W;
+			line.Left.Denominator.S  = B_LeftCoord[0]  / state.Vertex[0].Clip.W + B_LeftCoord[1]  / state.Vertex[1].Clip.W + B_LeftCoord[2]  / state.Vertex[2].Clip.W;
+			line.Right.Denominator.S = B_RightCoord[0] / state.Vertex[0].Clip.W + B_RightCoord[1] / state.Vertex[1].Clip.W + B_RightCoord[2] / state.Vertex[2].Clip.W;
 
-			line.Left.Denominator.T  = B_LeftCoord[0]  / RS.Vertex[0].Clip.W + B_LeftCoord[1]  / RS.Vertex[1].Clip.W + B_LeftCoord[2]  / RS.Vertex[2].Clip.W;
-			line.Right.Denominator.T = B_RightCoord[0] / RS.Vertex[0].Clip.W + B_RightCoord[1] / RS.Vertex[1].Clip.W + B_RightCoord[2] / RS.Vertex[2].Clip.W;
+			line.Left.Denominator.T  = B_LeftCoord[0]  / state.Vertex[0].Clip.W + B_LeftCoord[1]  / state.Vertex[1].Clip.W + B_LeftCoord[2]  / state.Vertex[2].Clip.W;
+			line.Right.Denominator.T = B_RightCoord[0] / state.Vertex[0].Clip.W + B_RightCoord[1] / state.Vertex[1].Clip.W + B_RightCoord[2] / state.Vertex[2].Clip.W;
 
 			line.Current.Numerator.S = line.Left.Numerator.S;
 			line.Current.Numerator.T = line.Left.Numerator.T;
@@ -735,7 +778,7 @@ namespace ShadowGLPrivate
 			line.Current.Denominator.S = line.Left.Denominator.S;
 			line.Current.Denominator.T = line.Left.Denominator.T;
 
-			if (RC.Enable.Fog)
+			if (state.Enable.Fog)
 			{
 				line.Left.Fog    = B_LeftCoord[0]  * vertex1->FogFactor + B_LeftCoord[1]  * vertex2->FogFactor + B_LeftCoord[2]  * vertex3->FogFactor;
 				line.Right.Fog   = B_RightCoord[0] * vertex1->FogFactor + B_RightCoord[1] * vertex2->FogFactor + B_RightCoord[2] * vertex3->FogFactor;
@@ -769,8 +812,8 @@ namespace ShadowGLPrivate
 				    //Use linear filtering 
 				    if (RC.Texture.MinFilter == SGL_LINEAR)
 				    {
-					    float uMinusHalf = RS.Triangle.TextureWidth * line.Current.S - 0.5f;
-					    float vMinusHalf = RS.Triangle.TextureHeight * line.Current.T - 0.5f;
+					    float uMinusHalf = state.Triangle.TextureWidth * line.Current.S - 0.5f;
+					    float vMinusHalf = state.Triangle.TextureHeight * line.Current.T - 0.5f;
 
 					    if (uMinusHalf < 0) { uMinusHalf = 0; }
 					    if (vMinusHalf < 0) { vMinusHalf = 0; }
@@ -780,16 +823,16 @@ namespace ShadowGLPrivate
 					    Int i1 = i0 + 1;
 					    Int j1 = j0 + 1;
 
-					    if (i0 == RS.Triangle.TextureWidth)  { i0--; }
-					    if (j0 == RS.Triangle.TextureHeight) { j0--; }
-					    if (i1 == RS.Triangle.TextureWidth)  { i1--; }
-					    if (j1 == RS.Triangle.TextureHeight) { j1--; }
+					    if (i0 == state.Triangle.TextureWidth)  { i0--; }
+					    if (j0 == state.Triangle.TextureHeight) { j0--; }
+					    if (i1 == state.Triangle.TextureWidth)  { i1--; }
+					    if (j1 == state.Triangle.TextureHeight) { j1--; }
 
 					    //Fetch 4 texels
-					    UINT Texel00 = *(UINT*)(&RS.Triangle.pTexture[(j0 * RS.Triangle.TextureWidth + i0) * RS.Texture.Components]);
-					    UINT Texel01 = *(UINT*)(&RS.Triangle.pTexture[(j0 * RS.Triangle.TextureWidth + i1) * RS.Texture.Components]);
-					    UINT Texel10 = *(UINT*)(&RS.Triangle.pTexture[(j1 * RS.Triangle.TextureWidth + i0) * RS.Texture.Components]);
-					    UINT Texel11 = *(UINT*)(&RS.Triangle.pTexture[(j1 * RS.Triangle.TextureWidth + i1) * RS.Texture.Components]);
+					    UINT Texel00 = *(UINT*)(&state.Triangle.pTexture[(j0 * state.Triangle.TextureWidth + i0) * state.Texture.Components]);
+					    UINT Texel01 = *(UINT*)(&state.Triangle.pTexture[(j0 * state.Triangle.TextureWidth + i1) * state.Texture.Components]);
+					    UINT Texel10 = *(UINT*)(&state.Triangle.pTexture[(j1 * state.Triangle.TextureWidth + i0) * state.Texture.Components]);
+					    UINT Texel11 = *(UINT*)(&state.Triangle.pTexture[(j1 * state.Triangle.TextureWidth + i1) * state.Texture.Components]);
 
 					    float alpha = uMinusHalf - (Int)uMinusHalf;
 					    float beta  = vMinusHalf - (Int)vMinusHalf;
@@ -803,9 +846,9 @@ namespace ShadowGLPrivate
 				    else
 				    {
 					    //Fetch texel
-					    Texel = *(UINT*)(&RS.Triangle.pTexture[
-                            ((Int)(RS.Triangle.TextureHeight * line.Current.T) * RS.Triangle.TextureWidth + (Int)(RS.Triangle.TextureWidth * line.Current.S))
-                                * RS.Texture.Components]);
+					    Texel = *(UINT*)(&state.Triangle.pTexture[
+                            ((Int)(state.Triangle.TextureHeight * line.Current.T) * state.Triangle.TextureWidth + (Int)(state.Triangle.TextureWidth * line.Current.S))
+                                * state.Texture.Components]);
 
                         //Implicitly use SGL_MODULATE as texture environment mode
                         pixel.Color[0] = line.Current.Color[0] * ((BYTE)(Texel)       * 0.00392156862745098f);
@@ -815,11 +858,11 @@ namespace ShadowGLPrivate
                     }
 
 				    //Apply fog
-				    if (RC.Enable.Fog)
+				    if (state.Enable.Fog)
 				    {
-					    pixel.Color[0] = line.Current.Fog * pixel.Color[0] + (1 - line.Current.Fog) * RS.Fog.Color[0];
-					    pixel.Color[1] = line.Current.Fog * pixel.Color[1] + (1 - line.Current.Fog) * RS.Fog.Color[1];
-					    pixel.Color[2] = line.Current.Fog * pixel.Color[2] + (1 - line.Current.Fog) * RS.Fog.Color[2];
+					    pixel.Color[0] = line.Current.Fog * pixel.Color[0] + (1 - line.Current.Fog) * state.Fog.Color[0];
+					    pixel.Color[1] = line.Current.Fog * pixel.Color[1] + (1 - line.Current.Fog) * state.Fog.Color[1];
+					    pixel.Color[2] = line.Current.Fog * pixel.Color[2] + (1 - line.Current.Fog) * state.Fog.Color[2];
 				    }
 
 				    pixel.Write.Color  = (UByte)(255 * pixel.Color[3]); pixel.Write.Color <<= 8;
@@ -839,7 +882,7 @@ namespace ShadowGLPrivate
 				AddVectors4(line.Current.Color, line.Current.Color, line.Iterator.Color);
 
                 //Update fog state
-                if (RC.Enable.Fog) { line.Current.Fog += line.Iterator.Fog; }
+                if (state.Enable.Fog) { line.Current.Fog += line.Iterator.Fog; }
 
 				//Update texture state
 				line.Current.Numerator.S   += line.Iterator.Numerator.S;

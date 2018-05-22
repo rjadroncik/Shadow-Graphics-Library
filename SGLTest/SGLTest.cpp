@@ -14,41 +14,41 @@ using namespace SCFImaging;
 #define MAX_LOADSTRING 100
 
 // Global Variables:
-HINSTANCE	hInst;							
+HINSTANCE hInst;							
 
-bool		Animate = true;
-bool		Focused = true;
-bool		Minimized = false;
-bool		ShowPlane = false;
-bool		ShowBox = true;
-bool		WasAnimating = false;
-bool		MouseLook = false;
+bool Animate = true;
+bool Focused = true;
+bool Minimized = false;
+bool ShowPlane = false;
+bool ShowBox = true;
+bool WasAnimating = false;
+bool MouseLook = false;
 
-HWND		hWindow = nullptr;
+HWND hWindow = nullptr;
 
 Float4	LightPos;
 Float4	Diffuse;
 
-Int			MoveMode = 0;
+Int MoveMode = 0;
 
-Float2	Angle;
-Float2	Angle_Iterator;
+Float2 Angle;
+Float2 Angle_Iterator;
+       
+Float  Scale = 1;
+Double Aspect = 1;
+       
+Float3 PlanePos;
+Float3 CubePos01;
+Float3 CubePos02;
+Float3 CameraPos;
+Float3 CameraAngle;
 
-Float	Scale = 1;
-Double	Aspect = 1;
+POINT MousePos;
+POINT OriginalMousePos;
 
-Float3	PlanePos;
-Float3	CubePos01;
-Float3	CubePos02;
-Float3	CameraPos;
-Float3	CameraAngle;
+Int TexName[16];
 
-POINT		MousePos;
-POINT		OriginalMousePos;
-
-Int         TexName[16];
-
-RECT		DrawRect;
+RECT DrawRect;
 
 //Foward declarations of functions included in this code module:
 ATOM				MyRegisterClass(HINSTANCE hInstance);

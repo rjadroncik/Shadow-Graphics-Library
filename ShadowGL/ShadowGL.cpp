@@ -31,7 +31,7 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserve
 	case DLL_PROCESS_ATTACH: 
 		{
 			//Reset textures
-			for (UByte i = 0; i < MAX_TEXTURES; i++)
+			for (UInt i = 0; i < MAX_TEXTURES; i++)
 			{
 				Texture[i].Used = false;
 				Texture[i].pData = nullptr;
@@ -50,9 +50,13 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserve
 				Texture[i].T_Wrap = REPEAT;
 */
 //				TexNameUsed[i] = false;
-
-				RS.Texture.Components = 0;
-			}
+			}				
+            
+            for (UInt i = 0; i < MAX_THREADS; i++)
+            {
+                //RS[i].Line.InterlaceId = i;
+                RS[i].Texture.Components = 0;
+            }
 
 			break; 
 		}
@@ -64,7 +68,7 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserve
     return true;
 }
 
-SHADOWGL_API bool ShadowGL::MakeCurrent(HDC hDC, HRC hRc)
+bool SHADOWGL_API ShadowGL::MakeCurrent(HDC hDC, HRC hRc)
 {
 	UNREFERENCED_PARAMETER(hDC);
 
@@ -76,7 +80,7 @@ SHADOWGL_API bool ShadowGL::MakeCurrent(HDC hDC, HRC hRc)
 	return true;
 }
 
-SHADOWGL_API HRC ShadowGL::CreateContext(HDC hDC)
+HRC SHADOWGL_API ShadowGL::CreateContext(HDC hDC)
 {
 	UNREFERENCED_PARAMETER(hDC);
 
@@ -248,7 +252,7 @@ SHADOWGL_API HRC ShadowGL::CreateContext(HDC hDC)
 	return (void*)pNewRC;
 }
 
-SHADOWGL_API bool ShadowGL::DeleteContext(HRC hRc)
+bool SHADOWGL_API ShadowGL::DeleteContext(HRC hRc)
 {
 	if (!hRc) { if (RC_OK) { RC.ErrorCode = SGL_INVALID_OPERATION; } return false; }
 
@@ -260,7 +264,7 @@ SHADOWGL_API bool ShadowGL::DeleteContext(HRC hRc)
 	return true;
 }
 
-SHADOWGL_API void ShadowGL::SwapBuffers(HDC hDC)
+void SHADOWGL_API ShadowGL::SwapBuffers(HDC hDC)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("SwapBuffers()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -283,7 +287,7 @@ SHADOWGL_API void ShadowGL::SwapBuffers(HDC hDC)
 	DrawDibDraw(RC.Buffer.hDrawDibDC, hDC, 0, 0, RC.View.Size[0], RC.View.Size[1], &RC.Buffer.BitmapInfoHeader, Buffer.Back, 0, 0, -1, -1, 0);
 }
 
-SHADOWGL_API void ShadowGL::Viewport(Int posX, Int posY, SizeI width, SizeI height)
+void SHADOWGL_API ShadowGL::Viewport(Int posX, Int posY, SizeI width, SizeI height)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Viewport()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -309,7 +313,7 @@ SHADOWGL_API void ShadowGL::Viewport(Int posX, Int posY, SizeI width, SizeI heig
 	RC.View.HalfSize[1] = RC.View.Size[1] / 2;
 }
 
-SHADOWGL_API void ShadowGL::Perspective(Double fov, Double aspect, Double clipNear, Double clipFar)
+void SHADOWGL_API ShadowGL::Perspective(Double fov, Double aspect, Double clipNear, Double clipFar)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Perspective()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -385,7 +389,7 @@ SHADOWGL_API void ShadowGL::Perspective(Double fov, Double aspect, Double clipNe
 	}
 }
 
-SHADOWGL_API void ShadowGL::Frustum(Double left, Double right, Double bottom, Double top, Double clipNear, Double clipFar)
+void SHADOWGL_API ShadowGL::Frustum(Double left, Double right, Double bottom, Double top, Double clipNear, Double clipFar)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Frustum()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -432,7 +436,7 @@ SHADOWGL_API void ShadowGL::Frustum(Double left, Double right, Double bottom, Do
 	}
 }
 
-SHADOWGL_API void ShadowGL::LoadIdentity()
+void SHADOWGL_API ShadowGL::LoadIdentity()
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("LoadIdentity()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -445,7 +449,7 @@ SHADOWGL_API void ShadowGL::LoadIdentity()
 	}
 }
 
-SHADOWGL_API void ShadowGL::PushMatrix()
+void SHADOWGL_API ShadowGL::PushMatrix()
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("PushMatrix()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -481,7 +485,7 @@ SHADOWGL_API void ShadowGL::PushMatrix()
 	}
 }
 
-SHADOWGL_API void ShadowGL::PopMatrix()
+void SHADOWGL_API ShadowGL::PopMatrix()
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("PopMatrix()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -505,7 +509,7 @@ SHADOWGL_API void ShadowGL::PopMatrix()
 	}
 }
 
-SHADOWGL_API void ShadowGL::MatrixMode(Enum mode)
+void SHADOWGL_API ShadowGL::MatrixMode(Enum mode)
 { 
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("MatrixMode()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -513,7 +517,7 @@ SHADOWGL_API void ShadowGL::MatrixMode(Enum mode)
 	if ((mode == SGL_MODELVIEW) || (mode == SGL_PROJECTION) || (mode == SGL_TEXTURE)) { RC.Matrix.Mode = mode; }
 }
 
-SHADOWGL_API void ShadowGL::Rotatef(Float angle, Float x, Float y, Float z)
+void SHADOWGL_API ShadowGL::Rotatef(Float angle, Float x, Float y, Float z)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Rotatef()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -560,7 +564,7 @@ SHADOWGL_API void ShadowGL::Rotatef(Float angle, Float x, Float y, Float z)
 	}
 }
 
-SHADOWGL_API void ShadowGL::Translatef(Float x, Float y, Float z)
+void SHADOWGL_API ShadowGL::Translatef(Float x, Float y, Float z)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Translatef()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -610,7 +614,7 @@ SHADOWGL_API void ShadowGL::Translatef(Float x, Float y, Float z)
 	}
 }
 
-SHADOWGL_API void ShadowGL::Scalef(Float x, Float y, Float z)
+void SHADOWGL_API ShadowGL::Scalef(Float x, Float y, Float z)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Scalef()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -660,7 +664,7 @@ SHADOWGL_API void ShadowGL::Scalef(Float x, Float y, Float z)
 	}
 }
 
-SHADOWGL_API void ShadowGL::ClearColor(ClampF red, ClampF green, ClampF blue, ClampF alpha)
+void SHADOWGL_API ShadowGL::ClearColor(ClampF red, ClampF green, ClampF blue, ClampF alpha)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("ClearColor()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -671,7 +675,7 @@ SHADOWGL_API void ShadowGL::ClearColor(ClampF red, ClampF green, ClampF blue, Cl
 	RC.Buffer.ClearColor[3]= blue;
 }
 
-SHADOWGL_API void ShadowGL::ClearDepth(ClampD depth)
+void SHADOWGL_API ShadowGL::ClearDepth(ClampD depth)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("ClearDepth()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -679,7 +683,7 @@ SHADOWGL_API void ShadowGL::ClearDepth(ClampD depth)
 	RC.Buffer.ClearDepth = (ClampF)depth;
 }
 
-SHADOWGL_API void ShadowGL::Clear(Bitfield mask)
+void SHADOWGL_API ShadowGL::Clear(Bitfield mask)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Clear()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }

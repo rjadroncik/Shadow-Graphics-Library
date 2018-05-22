@@ -14,7 +14,7 @@ namespace ShadowGLPrivate
 	UINT StateStackDepth = 0;
 }
 
-SHADOWGL_API void ShadowGL::Enable(Enum cap)
+void SHADOWGL_API ShadowGL::Enable(Enum cap)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Enable()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -37,7 +37,7 @@ SHADOWGL_API void ShadowGL::Enable(Enum cap)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::Disable(Enum cap)
+void SHADOWGL_API ShadowGL::Disable(Enum cap)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Disable()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -60,7 +60,7 @@ SHADOWGL_API void ShadowGL::Disable(Enum cap)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API Boolean ShadowGL::IsEnabled(Enum cap)
+Boolean SHADOWGL_API ShadowGL::IsEnabled(Enum cap)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Disable()"), MB_OK | MB_ICONERROR); return false; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return false; }
@@ -84,7 +84,7 @@ SHADOWGL_API Boolean ShadowGL::IsEnabled(Enum cap)
 	return false;
 }
 
-SHADOWGL_API void ShadowGL::Lightf(Enum light, Enum pname, Float param)
+void SHADOWGL_API ShadowGL::Lightf(Enum light, Enum pname, Float param)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Lightf()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -126,7 +126,7 @@ SHADOWGL_API void ShadowGL::Lightf(Enum light, Enum pname, Float param)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::Lightfv(Enum light, Enum pname, const Float *params)
+void SHADOWGL_API ShadowGL::Lightfv(Enum light, Enum pname, const Float *params)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Lightfv()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -190,7 +190,7 @@ SHADOWGL_API void ShadowGL::Lightfv(Enum light, Enum pname, const Float *params)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::LightModeli(Enum pname, Int param)
+void SHADOWGL_API ShadowGL::LightModeli(Enum pname, Int param)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("LightModeli()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -200,7 +200,7 @@ SHADOWGL_API void ShadowGL::LightModeli(Enum pname, Int param)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::LightModelfv(Enum pname, const Float *params)
+void SHADOWGL_API ShadowGL::LightModelfv(Enum pname, const Float *params)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("LightModelfv()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -212,7 +212,7 @@ SHADOWGL_API void ShadowGL::LightModelfv(Enum pname, const Float *params)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::GetBooleanv(Enum pname, Boolean *params)
+void SHADOWGL_API ShadowGL::GetBooleanv(Enum pname, Boolean *params)
 {
 	if (RC_OK && RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
@@ -232,7 +232,7 @@ SHADOWGL_API void ShadowGL::GetBooleanv(Enum pname, Boolean *params)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::GetDoublev(Enum pname, Double *params)
+void SHADOWGL_API ShadowGL::GetDoublev(Enum pname, Double *params)
 {
 	if (RC_OK && RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
@@ -243,7 +243,7 @@ SHADOWGL_API void ShadowGL::GetDoublev(Enum pname, Double *params)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::GetFloatv(Enum pname, Float *params)
+void SHADOWGL_API ShadowGL::GetFloatv(Enum pname, Float *params)
 {
 	if (RC_OK && RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
@@ -262,7 +262,7 @@ SHADOWGL_API void ShadowGL::GetFloatv(Enum pname, Float *params)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::GetIntegerv(Enum pname, Int *params)
+void SHADOWGL_API ShadowGL::GetIntegerv(Enum pname, Int *params)
 {
 	if (RC_OK && RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
 
@@ -316,12 +316,12 @@ SHADOWGL_API const UByte* ShadowGL::GetString(Enum name)
 }
 
 /*
-SHADOWGL_API void ShadowGL::GetLightfv(Enum light, Enum pname, Float *params)
+void SHADOWGL_API ShadowGL::GetLightfv(Enum light, Enum pname, Float *params)
 {
 
 }*/
 
-SHADOWGL_API void ShadowGL::Materialfv(Enum face, Enum pname, const Float *params)
+void SHADOWGL_API ShadowGL::Materialfv(Enum face, Enum pname, const Float *params)
 {
 	UNREFERENCED_PARAMETER(face);
 
@@ -352,7 +352,7 @@ SHADOWGL_API void ShadowGL::Materialfv(Enum face, Enum pname, const Float *param
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::FrontFace(Enum dir)
+void SHADOWGL_API ShadowGL::FrontFace(Enum dir)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("FrontFace()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -363,7 +363,7 @@ SHADOWGL_API void ShadowGL::FrontFace(Enum dir)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::CullFace(Enum mode)
+void SHADOWGL_API ShadowGL::CullFace(Enum mode)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("CullFace()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -374,7 +374,7 @@ SHADOWGL_API void ShadowGL::CullFace(Enum mode)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::Fogf(Enum pname, Float param)
+void SHADOWGL_API ShadowGL::Fogf(Enum pname, Float param)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Fogf()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -394,7 +394,7 @@ SHADOWGL_API void ShadowGL::Fogf(Enum pname, Float param)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::Fogi(Enum pname, Int param)
+void SHADOWGL_API ShadowGL::Fogi(Enum pname, Int param)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Fogi()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -414,7 +414,7 @@ SHADOWGL_API void ShadowGL::Fogi(Enum pname, Int param)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::Fogfv(Enum pname, const Float *params)
+void SHADOWGL_API ShadowGL::Fogfv(Enum pname, const Float *params)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Fogfv()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -435,13 +435,14 @@ SHADOWGL_API void ShadowGL::Fogfv(Enum pname, const Float *params)
 
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
+
 /*
-SHADOWGL_API void ShadowGL::TexImage1D(Enum target, Int level, Int components, SizeI width, Int border, Enum format, Enum type, const void *pixels)
+void SHADOWGL_API ShadowGL::TexImage1D(Enum target, Int level, Int components, SizeI width, Int border, Enum format, Enum type, const void *pixels)
 {
 
 }*/
 
-SHADOWGL_API void ShadowGL::TexImage2D(Enum target, Int level, Int components, SizeI width, SizeI height, Int border, Enum format, Enum type, const void *pixels)
+void SHADOWGL_API ShadowGL::TexImage2D(Enum target, Int level, Int components, SizeI width, SizeI height, Int border, Enum format, Enum type, const void *pixels)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("TexImage2D()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -452,7 +453,7 @@ SHADOWGL_API void ShadowGL::TexImage2D(Enum target, Int level, Int components, S
 	if ((components < 3)   || (components > 4))        { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
 	if ((border < 0)       || (border > 1))            { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
 
-	if ((level < 0) || ((Int)ceilf(logf(MAX_TEXTURE_SIZE) / logf(2)) < level)) { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
+	if ((level < 0) || ((Int)ceilf(logf((float)MAX_TEXTURE_SIZE) / logf(2)) < level)) { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
 
 	//Check texture dimensions	
 	if ((width  < 0) || (width  > MAX_TEXTURE_SIZE)) { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
@@ -511,18 +512,18 @@ SHADOWGL_API void ShadowGL::TexImage2D(Enum target, Int level, Int components, S
 }
 
 /*
-SHADOWGL_API void ShadowGL::TexEnvf(Enum target, Enum pname, Float param)
+void SHADOWGL_API ShadowGL::TexEnvf(Enum target, Enum pname, Float param)
 {
 
 }
 
-SHADOWGL_API void ShadowGL::TexEnvi(Enum target, Enum pname, Float param)
+void SHADOWGL_API ShadowGL::TexEnvi(Enum target, Enum pname, Float param)
 {
 
 }
 */
 
-SHADOWGL_API void ShadowGL::TexParameteri(Enum target, Enum pname, Int param)
+void SHADOWGL_API ShadowGL::TexParameteri(Enum target, Enum pname, Int param)
 {
     if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("TexParameteri()"), MB_OK | MB_ICONERROR); return; }
     if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -536,7 +537,7 @@ SHADOWGL_API void ShadowGL::TexParameteri(Enum target, Enum pname, Int param)
     RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::GetTexParameteriv(Enum target, Enum pname, Int *params)
+void SHADOWGL_API ShadowGL::GetTexParameteriv(Enum target, Enum pname, Int *params)
 {
     if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("TexParameteri()"), MB_OK | MB_ICONERROR); return; }
     if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -550,7 +551,7 @@ SHADOWGL_API void ShadowGL::GetTexParameteriv(Enum target, Enum pname, Int *para
     RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::GenTextures(SizeI n, Int *textures)
+void SHADOWGL_API ShadowGL::GenTextures(SizeI n, Int *textures)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("GenTextures()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -574,7 +575,7 @@ SHADOWGL_API void ShadowGL::GenTextures(SizeI n, Int *textures)
 	}
 }
 
-SHADOWGL_API void ShadowGL::DeleteTextures(SizeI n, const Int *textures)
+void SHADOWGL_API ShadowGL::DeleteTextures(SizeI n, const Int *textures)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("DeleteTextures()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -612,7 +613,7 @@ SHADOWGL_API void ShadowGL::DeleteTextures(SizeI n, const Int *textures)
 	}
 }
 
-SHADOWGL_API void ShadowGL::BindTexture(Enum target, Int texture)
+void SHADOWGL_API ShadowGL::BindTexture(Enum target, Int texture)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("BindTexture()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -631,7 +632,7 @@ SHADOWGL_API void ShadowGL::BindTexture(Enum target, Int texture)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::PixelTransferf(Enum pname, Float param)
+void SHADOWGL_API ShadowGL::PixelTransferf(Enum pname, Float param)
 {
 	if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("PixelTransferf()"), MB_OK | MB_ICONERROR); return; } 
 	if (RC.Primitive.Building) { RC.ErrorCode = SGL_INVALID_OPERATION; return; }
@@ -651,7 +652,7 @@ SHADOWGL_API void ShadowGL::PixelTransferf(Enum pname, Float param)
 	RC.ErrorCode = SGL_INVALID_ENUM;
 }
 
-SHADOWGL_API void ShadowGL::PushAttrib(Bitfield mask)
+void SHADOWGL_API ShadowGL::PushAttrib(Bitfield mask)
 {
 	StateSaved[StateStackDepth] = 0;
 	StateStack[StateStackDepth] = RC;
@@ -664,7 +665,7 @@ SHADOWGL_API void ShadowGL::PushAttrib(Bitfield mask)
 	StateStackDepth++;
 }
 
-SHADOWGL_API void ShadowGL::PopAttrib()
+void SHADOWGL_API ShadowGL::PopAttrib()
 {
 	StateStackDepth--;
 

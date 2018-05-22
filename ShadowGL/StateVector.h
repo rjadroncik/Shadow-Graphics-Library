@@ -9,23 +9,22 @@ using namespace SCFMathematics;
 
 namespace ShadowGLPrivate
 {
-    const   UByte   TRIANLGE_VERTICES           = 3;
-    const	UByte	MAX_PRIMITIVE_VERTICES		= 3;
-
-    const	UByte	MAX_MODELVIEW_MATRICES		= 32;
-    const	UByte	MAX_PROJECTION_MATRICES		= 2;
-    const	UByte	MAX_TEXTURE_MATRICES		= 2;
-
-    const	UByte	MAX_LIGHTS					= 8;
-    const	UByte	MAX_TEXTURES				= 255;
-
-    const	UShort	MAX_TEXTURE_SIZE			= 512;
-
-    const	UShort	MAX_BUFFER_WIDTH			= 2048;
-    const	UShort	MAX_BUFFER_HEIGHT			= 2048;
-
-    const	UShort	MAX_THREADS			        = 8;
-
+    const UInt TRIANLGE_VERTICES       = 3;
+    const UInt MAX_PRIMITIVE_VERTICES  = 3;
+               
+    const UInt MAX_MODELVIEW_MATRICES  = 32;
+    const UInt MAX_PROJECTION_MATRICES = 2;
+    const UInt MAX_TEXTURE_MATRICES    = 2;
+               
+    const UInt MAX_LIGHTS   = 8;
+    const UInt MAX_TEXTURES = 255;
+               
+    const UInt MAX_TEXTURE_SIZE = 512;
+               
+    const UInt MAX_BUFFER_WIDTH  = 2048;
+    const UInt MAX_BUFFER_HEIGHT = 2048;
+               
+    const UInt MAX_THREADS = 4;
 
     typedef struct SVertex
     {
@@ -55,6 +54,18 @@ namespace ShadowGLPrivate
     {
         UInt  Back [MAX_BUFFER_WIDTH * MAX_BUFFER_HEIGHT];
         Float Depth[MAX_BUFFER_WIDTH * MAX_BUFFER_HEIGHT];
+    };
+
+    struct SEnable
+    {
+        Boolean Lighting;
+        Boolean Normalize;
+        Boolean LocalViewer;
+        Boolean Texturing1D;
+        Boolean Texturing2D;
+        Boolean FaceCulling;
+        Boolean Fog;
+
     };
 
     struct SRenderingContext
@@ -95,6 +106,7 @@ namespace ShadowGLPrivate
             UInt Type;
 
             Boolean Building;	
+            Boolean IsClipped;
 
         } Primitive;
 
@@ -199,17 +211,7 @@ namespace ShadowGLPrivate
 
         } Light[MAX_LIGHTS];
 
-        struct SEnable
-        {
-            Boolean Lighting;
-            Boolean Normalize;
-            Boolean LocalViewer;
-            Boolean Texturing1D;
-            Boolean Texturing2D;
-            Boolean FaceCulling;
-            Boolean Fog;
-
-        } Enable;
+        SEnable Enable;
 
         Float4 Ambient;
 
@@ -264,11 +266,13 @@ namespace ShadowGLPrivate
 
             } Write;
 
-        } Pixel[MAX_THREADS];
+        } Pixel;
 
         struct SLineState
         {
-            Int Index;
+            UInt InterlaceId;
+
+            UInt Index;
             Float Length;
 
             struct SPoint
@@ -310,11 +314,11 @@ namespace ShadowGLPrivate
 
             } Iterator;
 
-        } Line[MAX_THREADS];
+        } Line;
 
         struct SVertex
         {
-            Int Y;
+            UInt Y;
 
             struct SClip
             {
@@ -355,8 +359,6 @@ namespace ShadowGLPrivate
 
         } Fog;
 
-        UByte V1;
-        UByte V2;
-        UByte V3;
+        SEnable Enable;
     };
 }
