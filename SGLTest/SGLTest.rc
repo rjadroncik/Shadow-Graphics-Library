@@ -190,7 +190,7 @@ BEGIN
     LTEXT           "Copyright (C) 2007",IDC_STATIC,14,84,78,8
     GROUPBOX        "",IDC_STATIC,6,28,95,73
     LTEXT           "ShadowGL Test Sesion",IDC_STATIC,115,39,78,8,SS_NOPREFIX
-    LTEXT           "Version:  0.700b",IDC_STATIC,115,53,78,8
+    LTEXT           "Version:  0.7.0.0",IDC_STATIC,115,53,78,8
     LTEXT           "Copyright (C) 2007",IDC_STATIC,115,68,78,8
     GROUPBOX        "",IDC_STATIC,108,28,94,57
     LTEXT           "0.000",IDC_VERSION,42,68,50,8

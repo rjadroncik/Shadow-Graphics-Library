@@ -203,7 +203,7 @@
 namespace ShadowGL
 {
 	//Base ShadowGL Information
-	const UByte VERSION[]      = "0.900a";
+	const UByte VERSION[]      = "0.9.0.0";
 	const Int   VERSION_NUMBER = 900;
 
 	SHADOWGL_API void ClearColor(ClampF red, ClampF green, ClampF blue, ClampF alpha);
