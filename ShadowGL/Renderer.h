@@ -15,4 +15,6 @@ namespace ShadowGLPrivate
 
 	void RasterizeTriangle(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3);
 	void ScanLine(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3, SRendererState::SLineState &line, SRendererState::SCurPixelState &pixel);
+
+    DWORD WINAPI RenderThread(_In_ LPVOID lpParameter);
 }

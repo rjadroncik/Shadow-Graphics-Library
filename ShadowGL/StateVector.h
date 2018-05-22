@@ -253,8 +253,58 @@ namespace ShadowGLPrivate
         Enum		Format;
     };
 
+    struct SSharedRenderState
+    {
+        HANDLE Threads[MAX_THREADS];
+        HANDLE WaitForWork[MAX_THREADS];
+        HANDLE DoneWithWork[MAX_THREADS];
+    };
+
     struct SRendererState
     {
+        struct SVertex
+        {
+            Int Y;
+
+            struct SClip
+            {
+                Float W;
+
+            } Clip;
+
+        } Vertex[3];
+
+        struct SCurTriangleState
+        {
+            Float Offset_13 = 0;
+            Float Offset_12 = 0;
+            Float Offset_23 = 0;
+
+            Float Coefficient_13 = 0;
+            Float Coefficient_12 = 0;
+            Float Coefficient_23 = 0;
+
+            Float TriangleArea = 0;
+
+            UByte *pTexture = nullptr;
+
+            SizeI TextureWidth = 0;
+            SizeI TextureHeight = 0;
+
+        } Triangle;
+
+        struct STextureState
+        {
+            UInt Components;
+
+        } Texture;
+
+        struct SFogState
+        {
+            Float4 Color;
+
+        } Fog;
+
         struct SCurPixelState
         {
             Int Index;
@@ -272,7 +322,7 @@ namespace ShadowGLPrivate
         {
             UInt InterlaceId;
 
-            UInt Index;
+            Int Index;
             Float Length;
 
             struct SPoint
@@ -315,50 +365,5 @@ namespace ShadowGLPrivate
             } Iterator;
 
         } Line;
-
-        struct SVertex
-        {
-            UInt Y;
-
-            struct SClip
-            {
-                Float W;
-
-            } Clip;
-
-        } Vertex[3];
-
-        struct SCurTriangleState
-        {
-            Float Offset_13 = 0;
-            Float Offset_12 = 0;
-            Float Offset_23 = 0;
-
-            Float Coefficient_13 = 0;
-            Float Coefficient_12 = 0;
-            Float Coefficient_23 = 0;
-
-            Float TriangleArea = 0;
-
-            UByte *pTexture = nullptr;
-
-            SizeI TextureWidth = 0;
-            SizeI TextureHeight = 0;
-
-        } Triangle;
-
-        struct STextureState
-        {
-            UInt Components;
-
-        } Texture;
-
-        struct SFogState
-        {
-            Float4 Color;
-
-        } Fog;
-
-        SEnable Enable;
     };
 }

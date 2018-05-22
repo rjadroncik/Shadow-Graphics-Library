@@ -8,6 +8,7 @@ using namespace ShadowGLPrivate;
 
 namespace ShadowGLPrivate
 {
+    SSharedRenderState SRS;
 	SRendererState RS[MAX_THREADS];
 
     //Triangle area multipleid by two (simply by removing the division by 2 from the regular formula)
@@ -51,27 +52,6 @@ void SHADOWGL_API ShadowGL::End()
     RC.Primitive.Building = false;
 }
 
-DWORD WINAPI RenderThread(_In_ LPVOID lpParameter)
-{
-    SRendererState& state = *(SRendererState*)lpParameter;
-
-    if (RC.Primitive.IsClipped)
-    {
-        if (RC.Primitive.ClipCount)
-        {
-            PreparePolygon(state, &RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
-            RasterizePolygon(state, &RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
-        }
-    }
-    else
-    {
-        PreparePolygon(state, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
-        RasterizePolygon(state, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
-    }
-
-    return 0;
-}
-
 void SHADOWGL_API ShadowGL::Vertex3f(Float x, Float y, Float z)
 {
     if (!RC_OK) { MessageBox(nullptr, TEXT("No Current Rendering Context!"), TEXT("Vertex3f()"), MB_OK | MB_ICONERROR); return; }
@@ -99,37 +79,20 @@ void SHADOWGL_API ShadowGL::Vertex3f(Float x, Float y, Float z)
         {
             if (RC.Primitive.VerticesSubmitted == ShadowGLPrivate::TRIANLGE_VERTICES)
             {
-                HANDLE threads[MAX_THREADS];
+                if (CullTriangle(RC.Enable)) { RC.Primitive.VerticesSubmitted = 0; return; }
 
+                PrepareLighting(RC.Enable, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
+
+                RC.Primitive.IsClipped = ClipTriangle(RC.Enable);
+
+                //Signal threads to go
                 for (UInt i = 0; i < MAX_THREADS; i++)
                 {
-                    SRendererState& state = RS[i];
-                    memcpy(&state.Enable, &RC.Enable, sizeof(SEnable));
-
-                    if (i == 0)
-                    {
-                        if (CullTriangle(RC.Enable)) { RC.Primitive.VerticesSubmitted = 0; return; }
-                    
-                        PrepareLighting(RC.Enable, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
-
-                        RC.Primitive.IsClipped = ClipTriangle(RC.Enable);
-                        
-                        for (UInt j = 1; j < MAX_THREADS; j++)
-                        {
-                            memcpy(&RS[j], &RS[0], sizeof(SRendererState));
-                            RS[j].Line.InterlaceId = j;
-                        }
-                    }
-
-                    threads[i] = CreateThread(NULL, 0, RenderThread, &state, 0, NULL);
+                    SetEvent(SRS.WaitForWork[i]);
                 }
 
-                WaitForMultipleObjects(MAX_THREADS, threads, true, INFINITE);
-
-                for (UInt i = 0; i < MAX_THREADS; i++)
-                {
-                    CloseHandle(threads[i]);
-                }
+                //Wait for threads to finish
+                WaitForMultipleObjects(MAX_THREADS, SRS.DoneWithWork, true, INFINITE);
 
                 RC.Primitive.VerticesSubmitted = 0;
             }
@@ -203,6 +166,34 @@ void SHADOWGL_API ShadowGL::TexCoord2f(Float x, Float y)
 
 namespace ShadowGLPrivate
 {
+    DWORD WINAPI RenderThread(_In_ LPVOID lpParameter)
+    {
+        SRendererState& state = *(SRendererState*)lpParameter;
+
+        while(1)
+        {
+            WaitForSingleObject(SRS.WaitForWork[state.Line.InterlaceId], INFINITE);
+
+            if (RC.Primitive.IsClipped)
+            {
+                if (RC.Primitive.ClipCount)
+                {
+                    PreparePolygon(state, &RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
+                    RasterizePolygon(state, &RC.Primitive.ClipVertex[RC.Primitive.ClipArray][0], RC.Primitive.ClipCount);
+                }
+            }
+            else
+            {
+                PreparePolygon(state, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
+                RasterizePolygon(state, &RC.Primitive.Vertex[0], ShadowGLPrivate::TRIANLGE_VERTICES);
+            }
+
+            SetEvent(SRS.DoneWithWork[state.Line.InterlaceId]);
+        }
+
+        return 0;
+    }
+
 	bool CullTriangle(SEnable& enable)
 	{
 		//Vertex Processing
@@ -509,13 +500,13 @@ namespace ShadowGLPrivate
 			vertex[i].ViewCoord[2] = vertex[i].NormCoord[2];// / 2 + 0.5f;  		
 
 			//Process texture coordinates
-			if (state.Enable.Texturing2D)
+			if (RC.Enable.Texturing2D)
 			{
 				MultiplyMatrix4Vector4(vertex[i].FinTexCoord, RC.Matrix.Texture[RC.Matrix.TCurrent], vertex[i].ObjTexCoord);
 			}
 		}
 
-        if (state.Enable.Fog)
+        if (RC.Enable.Fog)
         {
 		    //Lighting calculations
 		    for (UInt i = 0; i < count; i++)
@@ -543,14 +534,7 @@ namespace ShadowGLPrivate
 				float InverseFogContribution = 1 - FogContribution; 
 
 				vertex[i].FogFactor = FogContribution;
-
-				if (!state.Enable.Texturing1D && !state.Enable.Texturing2D)
-				{
-					vertex[i].LitColor[0] = FogContribution * vertex[i].LitColor[0] + InverseFogContribution * RC.Fog.Color[0];
-					vertex[i].LitColor[1] = FogContribution * vertex[i].LitColor[1] + InverseFogContribution * RC.Fog.Color[1];
-					vertex[i].LitColor[2] = FogContribution * vertex[i].LitColor[2] + InverseFogContribution * RC.Fog.Color[2];
-				}  
-                
+              
                 //Clamping lit colors
                 ClampVector4(vertex[i].LitColor, 0, 1);
 			}
@@ -584,7 +568,7 @@ namespace ShadowGLPrivate
 
 	void RasterizeTopPartOfTriangleWithMiddleVertexRight(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
 	{
-		for (state.Line.Index = state.Vertex[0].Y; state.Line.Index <= state.Vertex[1].Y; state.Line.Index++)
+		for (state.Line.Index = state.Vertex[0].Y + state.Line.InterlaceId; state.Line.Index <= state.Vertex[1].Y; state.Line.Index += MAX_THREADS)
 		{
 			if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
 			{
@@ -599,7 +583,7 @@ namespace ShadowGLPrivate
 
 	void RasterizeBottomPartOfTriangleWithMiddleVertexRight(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
 	{    
-		for (state.Line.Index = state.Vertex[1].Y + 1; state.Line.Index <= state.Vertex[2].Y; state.Line.Index++)
+		for (state.Line.Index = state.Vertex[1].Y + 1 + state.Line.InterlaceId; state.Line.Index <= state.Vertex[2].Y; state.Line.Index += MAX_THREADS)
 		{
 			//Compute left & right coordinate values
 			if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
@@ -615,7 +599,7 @@ namespace ShadowGLPrivate
 
     void RasterizeTopPartOfTriangleWithMiddleVertexLeft(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
 	{
-		for (state.Line.Index = state.Vertex[0].Y; state.Line.Index <= state.Vertex[1].Y; state.Line.Index++)
+		for (state.Line.Index = state.Vertex[0].Y + state.Line.InterlaceId; state.Line.Index <= state.Vertex[1].Y; state.Line.Index += MAX_THREADS)
 		{
 			if (vertex1->ViewCoord[1] != vertex2->ViewCoord[1])
 			{
@@ -630,7 +614,7 @@ namespace ShadowGLPrivate
 
     void RasterizeBottomPartOfTriangleWithMiddleVertexLeft(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3)
     {
-        for (state.Line.Index = state.Vertex[1].Y + 1; state.Line.Index <= state.Vertex[2].Y; state.Line.Index++)
+        for (state.Line.Index = state.Vertex[1].Y + 1 + state.Line.InterlaceId; state.Line.Index <= state.Vertex[2].Y; state.Line.Index += MAX_THREADS)
 		{
 			if (vertex2->ViewCoord[1] != vertex3->ViewCoord[1])
 			{
@@ -647,13 +631,13 @@ namespace ShadowGLPrivate
 	{
 		//Texturing variables
 		state.Vertex[0].Clip.W = vertex1->ClipCoord[3]; 
-		state.Vertex[1].Clip.W	= vertex2->ClipCoord[3];
+		state.Vertex[1].Clip.W = vertex2->ClipCoord[3];
 		state.Vertex[2].Clip.W = vertex3->ClipCoord[3];
 
 		//Prepare other values
 		CopyVector4(state.Fog.Color, RC.Fog.Color);
 
-		if (state.Enable.Texturing2D)
+		if (RC.Enable.Texturing2D)
 		{
             state.Triangle.pTexture      = Texture[RC.Texture.Current2D].pData;
             state.Triangle.TextureWidth  = Texture[RC.Texture.Current2D].Width;
@@ -702,11 +686,6 @@ namespace ShadowGLPrivate
 
 	void ScanLine(SRendererState& state, tVertex *vertex1, tVertex *vertex2, tVertex *vertex3, SRendererState::SLineState &line, SRendererState::SCurPixelState &pixel)
 	{
-        if (!(state.Line.Index % MAX_THREADS == state.Line.InterlaceId))
-        {
-            return;
-        }
-
         //Prepare line length
         line.Length = (Float)(line.Right.X - line.Left.X);
         if (line.Length == 0) { return; }
@@ -757,8 +736,16 @@ namespace ShadowGLPrivate
         SubtractVectors4(line.Iterator.Color, line.Right.Color, line.Left.Color);
         DivideVector4(line.Iterator.Color, line.Iterator.Color, line.Length);
 
+        if (RC.Enable.Fog)
+        {
+            line.Left.Fog = B_LeftCoord[0] * vertex1->FogFactor + B_LeftCoord[1] * vertex2->FogFactor + B_LeftCoord[2] * vertex3->FogFactor;
+            line.Right.Fog = B_RightCoord[0] * vertex1->FogFactor + B_RightCoord[1] * vertex2->FogFactor + B_RightCoord[2] * vertex3->FogFactor;
+            line.Current.Fog = line.Left.Fog;
+            line.Iterator.Fog = (line.Right.Fog - line.Left.Fog) / line.Length;
+        }
+
 		//Prepare texture coords
-		if (state.Enable.Texturing2D)
+		if (RC.Enable.Texturing2D)
 		{
 			line.Left.Numerator.S  = B_LeftCoord[0]  * vertex1->FinTexCoord[0] / state.Vertex[0].Clip.W + B_LeftCoord[1]  * vertex2->FinTexCoord[0] / state.Vertex[1].Clip.W + B_LeftCoord[2]  * vertex3->FinTexCoord[0] / state.Vertex[2].Clip.W;
 			line.Right.Numerator.S = B_RightCoord[0] * vertex1->FinTexCoord[0] / state.Vertex[0].Clip.W + B_RightCoord[1] * vertex2->FinTexCoord[0] / state.Vertex[1].Clip.W + B_RightCoord[2] * vertex3->FinTexCoord[0] / state.Vertex[2].Clip.W;
@@ -777,14 +764,6 @@ namespace ShadowGLPrivate
 
 			line.Current.Denominator.S = line.Left.Denominator.S;
 			line.Current.Denominator.T = line.Left.Denominator.T;
-
-			if (state.Enable.Fog)
-			{
-				line.Left.Fog    = B_LeftCoord[0]  * vertex1->FogFactor + B_LeftCoord[1]  * vertex2->FogFactor + B_LeftCoord[2]  * vertex3->FogFactor;
-				line.Right.Fog   = B_RightCoord[0] * vertex1->FogFactor + B_RightCoord[1] * vertex2->FogFactor + B_RightCoord[2] * vertex3->FogFactor;
-				line.Current.Fog = line.Left.Fog;
-                line.Iterator.Fog = (line.Right.Fog - line.Left.Fog) / line.Length;
-            }
 
 			line.Iterator.Numerator.S   = (line.Right.Numerator.S   - line.Left.Numerator.S)   / line.Length;
 			line.Iterator.Denominator.S = (line.Right.Denominator.S - line.Left.Denominator.S) / line.Length;
@@ -858,7 +837,7 @@ namespace ShadowGLPrivate
                     }
 
 				    //Apply fog
-				    if (state.Enable.Fog)
+				    if (RC.Enable.Fog)
 				    {
 					    pixel.Color[0] = line.Current.Fog * pixel.Color[0] + (1 - line.Current.Fog) * state.Fog.Color[0];
 					    pixel.Color[1] = line.Current.Fog * pixel.Color[1] + (1 - line.Current.Fog) * state.Fog.Color[1];
@@ -882,7 +861,7 @@ namespace ShadowGLPrivate
 				AddVectors4(line.Current.Color, line.Current.Color, line.Iterator.Color);
 
                 //Update fog state
-                if (state.Enable.Fog) { line.Current.Fog += line.Iterator.Fog; }
+                if (RC.Enable.Fog) { line.Current.Fog += line.Iterator.Fog; }
 
 				//Update texture state
 				line.Current.Numerator.S   += line.Iterator.Numerator.S;
@@ -899,10 +878,24 @@ namespace ShadowGLPrivate
 				//Scan one line
 				if (line.Current.Z < Buffer.Depth[pixel.Index]) 
                 {
-                    pixel.Write.Color = (UByte)(255 * line.Current.Color[3]); pixel.Write.Color <<= 8;
-                    pixel.Write.Color += (UByte)(255 * line.Current.Color[0]); pixel.Write.Color <<= 8;
-                    pixel.Write.Color += (UByte)(255 * line.Current.Color[1]); pixel.Write.Color <<= 8;
-                    pixel.Write.Color += (UByte)(255 * line.Current.Color[2]);
+                    if (RC.Enable.Fog)
+                    {
+                        pixel.Color[0] = line.Current.Fog * line.Current.Color[0] + (1 - line.Current.Fog) * state.Fog.Color[0];
+                        pixel.Color[1] = line.Current.Fog * line.Current.Color[1] + (1 - line.Current.Fog) * state.Fog.Color[1];
+                        pixel.Color[2] = line.Current.Fog * line.Current.Color[2] + (1 - line.Current.Fog) * state.Fog.Color[2];
+
+                        pixel.Write.Color = (UByte)(255 * line.Current.Color[3]); pixel.Write.Color <<= 8;
+                        pixel.Write.Color += (UByte)(255 * pixel.Color[0]); pixel.Write.Color <<= 8;
+                        pixel.Write.Color += (UByte)(255 * pixel.Color[1]); pixel.Write.Color <<= 8;
+                        pixel.Write.Color += (UByte)(255 * pixel.Color[2]);
+                    }
+                    else
+                    {
+                        pixel.Write.Color = (UByte)(255 * line.Current.Color[3]); pixel.Write.Color <<= 8;
+                        pixel.Write.Color += (UByte)(255 * line.Current.Color[0]); pixel.Write.Color <<= 8;
+                        pixel.Write.Color += (UByte)(255 * line.Current.Color[1]); pixel.Write.Color <<= 8;
+                        pixel.Write.Color += (UByte)(255 * line.Current.Color[2]);
+                    }
 
                     Buffer.Back[pixel.Index] = pixel.Write.Color; 
                     Buffer.Depth[pixel.Index] = line.Current.Z; 
@@ -913,6 +906,9 @@ namespace ShadowGLPrivate
                 line.Current.Z += line.Iterator.Z;
 
                 AddVectors4(line.Current.Color, line.Current.Color, line.Iterator.Color);
+
+                //Update fog state
+                if (RC.Enable.Fog) { line.Current.Fog += line.Iterator.Fog; }
             }
 		}
 	}

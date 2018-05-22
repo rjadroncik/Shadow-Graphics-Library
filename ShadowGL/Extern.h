@@ -5,10 +5,11 @@
 
 namespace ShadowGLPrivate
 {
-    extern SBufferState      Buffer;
-    extern STexture          Texture[MAX_TEXTURES];
-	extern SRendererState    RS[MAX_THREADS];
-    extern SRenderingContext RC;
+    extern SBufferState       Buffer;
+    extern STexture           Texture[MAX_TEXTURES];
+    extern SSharedRenderState SRS;
+    extern SRendererState     RS[MAX_THREADS];
+    extern SRenderingContext  RC;
 
 	extern Boolean RC_OK;
 }

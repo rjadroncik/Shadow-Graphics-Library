@@ -51,18 +51,32 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserve
 */
 //				TexNameUsed[i] = false;
 			}				
-            
+
             for (UInt i = 0; i < MAX_THREADS; i++)
             {
-                //RS[i].Line.InterlaceId = i;
-                RS[i].Texture.Components = 0;
+                SRendererState& state = RS[i];
+
+                state.Line.InterlaceId = i;
+                state.Texture.Components = 0;
+
+                SRS.WaitForWork[i] = CreateEvent(NULL, false, false, NULL);
+                SRS.DoneWithWork[i] = CreateEvent(NULL, false, false, NULL);
+                SRS.Threads[i] = CreateThread(NULL, 0, ShadowGLPrivate::RenderThread, &state, 0, NULL);
             }
 
 			break; 
 		}
 	case DLL_THREAD_ATTACH: { break; }
 	case DLL_THREAD_DETACH:	{ break; }
-	case DLL_PROCESS_DETACH: { break; }
+	case DLL_PROCESS_DETACH: 
+        {
+            for (UInt i = 0; i < MAX_THREADS; i++)
+            {
+                CloseHandle(SRS.Threads[i]);
+            }
+
+            break; 
+        }
     }
 
     return true;
