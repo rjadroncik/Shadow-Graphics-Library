@@ -62,6 +62,7 @@ BOOL CALLBACK		FogOptions(HWND, UINT, WPARAM, LPARAM);
 
 void				DrawScene(HDC hDC);
 void				DrawCube();
+void				DrawSphere();
 
 HRC					hRC = nullptr;
 
@@ -779,6 +780,24 @@ void DrawScene(HDC hDC)
     PopAttrib();
     PopMatrix();
 
+    PushMatrix();
+    {
+        BindTexture(SGL_TEXTURE_2D, TexName[1]);
+
+        //Translatef(CubePos02[0], CubePos02[1], CubePos02[2]);
+
+        Rotatef(Angle[0], 1, 0, 0);
+        Rotatef(Angle[1], 0, 1, 0);
+
+        Scalef(Scale * 100, Scale * 100, Scale * 100);
+
+        SetVector4(Diffuse, 0.7f, 0.7f, 0.6f, 1);
+        Materialfv(SGL_FRONT, SGL_DIFFUSE, &Diffuse[0]);
+
+        DrawSphere();
+    }
+    PopMatrix();
+
     if (ShowBox)
     {
         PushMatrix();
@@ -928,6 +947,64 @@ void DrawCube()
         Color3f(1.0f, 1.0f, 0.0f);	TexCoord2f(0.0f, 0.0f); Vertex3f(-100.0f, -100.0f, -100.0f);
         Color3f(1.0f, 1.0f, 0.0f);	TexCoord2f(0.0f, 1.0f); Vertex3f(-100.0f, -100.0f,  100.0f);
         Color3f(1.0f, 1.0f, 0.0f);	TexCoord2f(1.0f, 1.0f); Vertex3f(-100.0f,  100.0f,  100.0f);
+    }
+    End();
+}
+
+#define CalculatePoint(vector, u,v) SetVector3(vector, cos(u)*sin(v), cos(v), sin(u)*sin(v))
+#define SubmitPoint(point, u, v) Normal3f(point[0], point[1], point[2]); TexCoord2f(u, v); Vertex3f(point[0], point[1], point[2]);
+
+void DrawSphere()
+{
+    int UResolution = 20;
+    int VResolution = 20;
+
+    Begin(SGL_TRIANGLES);
+    {
+        float startU = 0;
+        float startV = 0;
+        float endU = SCFPi * 2;
+        float endV = SCFPi;
+        
+        float stepU = (endU - startU) / UResolution; // step size between U-points on the grid
+        float stepV = (endV - startV) / VResolution; // step size between V-points on the grid
+
+        Color3f(0.0f, 0.0f, 0.0f);
+
+        for (int i = 0; i < UResolution; i++)  // U-points
+        {
+            for (int j = 0; j < VResolution; j++) // V-points
+            { 
+                float u = i * stepU + startU;
+                float v = j * stepV + startV;
+                float un = (i + 1 == UResolution) ? endU : (i + 1) * stepU + startU;
+                float vn = (j + 1 == VResolution) ? endV : (j + 1) * stepV + startV;
+      
+                // Find the four points of the grid
+                // square by evaluating the parametric
+                // surface function
+                Float3 p0, p1, p2, p3;
+                CalculatePoint(p0, u, v);
+                CalculatePoint(p1, u, vn);
+                CalculatePoint(p2, un, v);
+                CalculatePoint(p3, un, vn);
+
+                // NOTE: For spheres, the normal is just the normalized
+                // version of each vertex point; this generally won't be the case for
+                // other parametric surfaces.
+                // Output the first triangle of this grid square
+                //triangle(p0, p2, p1);
+                SubmitPoint(p0, u, v);
+                SubmitPoint(p2, un, v);
+                SubmitPoint(p1, u, vn);
+                
+                // Output the other triangle of this grid square
+                //triangle(p3, p1, p2);
+                SubmitPoint(p3, un, vn);
+                SubmitPoint(p1, u, vn);
+                SubmitPoint(p2, un, v);
+            }
+        }
     }
     End();
 }
