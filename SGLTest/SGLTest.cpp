@@ -430,6 +430,27 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
         }
         delete pPicture;
     }
+
+    pPicture = CImage::Load(TEXT("Data\\Earth.tga"), 0);
+    if (pPicture)
+    {
+        switch (pPicture->Channels())
+        {
+        case 3:
+            {
+                BindTexture(SGL_TEXTURE_2D, TexName[2]);
+                TexImage2D(SGL_TEXTURE_2D, 0, pPicture->Channels(), pPicture->Width(), pPicture->Height(), 0, SGL_BGR_EXT, SGL_UNSIGNED_BYTE, pPicture->Data());
+                break;
+            }
+        case 4:
+            {
+                BindTexture(SGL_TEXTURE_2D, TexName[2]);
+                TexImage2D(SGL_TEXTURE_2D, 0, pPicture->Channels(), pPicture->Width(), pPicture->Height(), 0, SGL_BGRA_EXT, SGL_UNSIGNED_BYTE, pPicture->Data());
+                break;
+            }
+        }
+        delete pPicture;
+    }
         
     Enable(SGL_TEXTURE_2D);  
 
@@ -782,7 +803,7 @@ void DrawScene(HDC hDC)
 
     PushMatrix();
     {
-        BindTexture(SGL_TEXTURE_2D, TexName[1]);
+        BindTexture(SGL_TEXTURE_2D, TexName[2]);
 
         //Translatef(CubePos02[0], CubePos02[1], CubePos02[2]);
 
@@ -952,12 +973,12 @@ void DrawCube()
 }
 
 #define CalculatePoint(vector, u,v) SetVector3(vector, cos(u)*sin(v), cos(v), sin(u)*sin(v))
-#define SubmitPoint(point, u, v) Normal3f(point[0], point[1], point[2]); TexCoord2f(u, v); Vertex3f(point[0], point[1], point[2]);
+#define SubmitPoint(point, u, v) Normal3f(point[0], point[1], point[2]); TexCoord2f(u / (SCFPi * 2), v / SCFPi); Vertex3f(point[0], point[1], point[2]);
 
 void DrawSphere()
 {
     int UResolution = 20;
-    int VResolution = 20;
+    int VResolution = 10;
 
     Begin(SGL_TRIANGLES);
     {

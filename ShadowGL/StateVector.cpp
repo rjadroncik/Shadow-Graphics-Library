@@ -449,7 +449,7 @@ void SHADOWGL_API ShadowGL::TexImage2D(Enum target, Int level, Int components, S
 
 	//Check input values
 	if (target != SGL_TEXTURE_2D)                      { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
-	if ((format < SGL_RGB) || (format > SGL_BGRA_EXT)) { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
+	if ((format < SGL_RGB) || (format > SGL_BGRA_EXT)) { RC.ErrorCode = SGL_INVALID_ENUM; return; }
 	if ((components < 3)   || (components > 4))        { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
 	if ((border < 0)       || (border > 1))            { RC.ErrorCode = SGL_INVALID_ENUM; return; } 
 
@@ -494,6 +494,13 @@ void SHADOWGL_API ShadowGL::TexImage2D(Enum target, Int level, Int components, S
 		RedOffset  = 2;
 		BlueOffset = 0;
 	}
+    
+    if (format == SGL_BGRA_EXT)
+    {
+        RedOffset = 2;
+        GreenOffset = 1;
+        BlueOffset = 0;
+    }
 
 	if (type == SGL_UNSIGNED_BYTE)
 	{
@@ -501,11 +508,12 @@ void SHADOWGL_API ShadowGL::TexImage2D(Enum target, Int level, Int components, S
 		float GreenScale = RC.PixelTransfer.Scale_Green / 255;
 		float BlueScale  = RC.PixelTransfer.Scale_Blue  / 255;
 
-		for (UInt i = 0; i < TextureSize; i += 3)
+		for (UInt i = 0; i < TextureSize; i += components)
 		{
-			Texture[RC.Texture.Current2D].pData[i + RedOffset]   = (UByte)((RedScale   * ((UByte*)pixels)[i    ] + RC.PixelTransfer.Bias_Red)   * 255);
-			Texture[RC.Texture.Current2D].pData[i + GreenOffset] = (UByte)((GreenScale * ((UByte*)pixels)[i + 1] + RC.PixelTransfer.Bias_Green) * 255);
-			Texture[RC.Texture.Current2D].pData[i + BlueOffset]  = (UByte)((BlueScale  * ((UByte*)pixels)[i + 2] + RC.PixelTransfer.Bias_Blue)  * 255);
+			Texture[RC.Texture.Current2D].pData[i + 0] = (UByte)((RedScale   * ((UByte*)pixels)[i + RedOffset  ] + RC.PixelTransfer.Bias_Red)   * 255);
+			Texture[RC.Texture.Current2D].pData[i + 1] = (UByte)((GreenScale * ((UByte*)pixels)[i + GreenOffset] + RC.PixelTransfer.Bias_Green) * 255);
+			Texture[RC.Texture.Current2D].pData[i + 2] = (UByte)((BlueScale  * ((UByte*)pixels)[i + BlueOffset ] + RC.PixelTransfer.Bias_Blue)  * 255);
+            //TODO: Process aplha
 		}
 		return;
 	}
